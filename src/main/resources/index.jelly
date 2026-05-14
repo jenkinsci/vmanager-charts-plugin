@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin provides interactive vManager charts for Jenkins jobs, displaying build duration trends, success/failure rates, and test results over time.
+</div>

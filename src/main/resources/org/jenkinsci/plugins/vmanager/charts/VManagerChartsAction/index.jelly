@@ -1,0 +1,55 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout">
+    <l:layout title="${it.displayName} - ${it.job.displayName}">
+        <st:include page="sidepanel.jelly" it="${it.job}" optional="true"/>
+        <l:main-panel>
+            <h1>${it.displayName}</h1>
+
+            <st:adjunct includes="io.jenkins.plugins.echarts"/>
+
+            <st:bind var="vManagerChartsProxy" value="${it}"/>
+            <script type="text/javascript">
+                window.vManagerChartsRootUrl = "${rootURL}";
+            </script>
+
+            <div class="vmanager-charts-container">
+                <!-- Build Duration Chart -->
+                <j:if test="${it.showBuildDuration}">
+                    <div class="chart-section">
+                        <h2>Build Duration Over Time</h2>
+                        <div id="durationChart" style="width: 100%; height: 400px;"></div>
+                    </div>
+                </j:if>
+
+                <!-- Success Rate Chart -->
+                <j:if test="${it.showSuccessRate}">
+                    <div class="chart-section">
+                        <h2>Build Success/Failure Rate</h2>
+                        <div id="successRateChart" style="width: 100%; height: 400px;"></div>
+                    </div>
+                </j:if>
+
+                <!-- Test Results Chart -->
+                <j:if test="${it.showTestResults}">
+                    <div class="chart-section">
+                        <h2>Test Results Trend</h2>
+                        <div id="testResultsChart" style="width: 100%; height: 400px;"></div>
+                    </div>
+                </j:if>
+
+                <!-- Custom Charts -->
+                <j:if test="${it.showCustomMetrics}">
+                    <j:forEach var="chartTitle" items="${it.customChartTitles}" varStatus="loop">
+                        <div class="chart-section">
+                            <h2>${chartTitle}</h2>
+                            <div id="customMetricChart_${loop.index}" style="width: 100%; height: 400px;"></div>
+                        </div>
+                    </j:forEach>
+                </j:if>
+            </div>
+
+            <script type="text/javascript" src="${resURL}/plugin/vmanager-charts/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.js"/>
+            <link rel="stylesheet" type="text/css" href="${resURL}/plugin/vmanager-charts/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.css"/>
+        </l:main-panel>
+    </l:layout>
+</j:jelly>

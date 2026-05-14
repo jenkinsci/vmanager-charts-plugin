@@ -1,0 +1,34 @@
+.vmanager-charts-container {
+    padding: 20px;
+}
+
+.chart-section {
+    margin-bottom: 40px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.chart-section h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+#durationChart, #successRateChart, #testResultsChart {
+    min-height: 400px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chart-section {
+        padding: 10px;
+    }
+
+    #durationChart, #successRateChart, #testResultsChart {
+        height: 300px !important;
+    }
+}
