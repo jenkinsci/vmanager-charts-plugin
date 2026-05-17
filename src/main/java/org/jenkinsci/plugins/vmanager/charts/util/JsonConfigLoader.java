@@ -38,7 +38,7 @@ public final class JsonConfigLoader {
     public static String toJson(VManagerChartsJobProperty p) {
         JSONObject root = new JSONObject();
         root.put("enabled",                         p.isEnabled());
-        root.put("vManagerSchema",                  p.getVManagerSchema() == null ? "latest" : p.getVManagerSchema());
+        root.put("vManagerSchema",                  p.getVManagerSchema());
         root.put("maxBuilds",                       p.getMaxBuilds());
         root.put("showBuildLevelCharts",            p.isShowBuildLevelCharts());
         root.put("showRegressionOptimizationChart", p.isShowRegressionOptimizationChart());

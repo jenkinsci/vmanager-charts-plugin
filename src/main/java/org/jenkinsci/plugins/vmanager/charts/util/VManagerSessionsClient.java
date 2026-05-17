@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -314,10 +315,10 @@ public final class VManagerSessionsClient {
             Object rowObj = rows.get(i);
             if (!(rowObj instanceof JSONObject)) continue;
             JSONObject row = (JSONObject) rowObj;
-            for (String id : out.keySet()) {
-                Double v = optDouble(row, id);
+            for (Map.Entry<String, Double> e : out.entrySet()) {
+                Double v = optDouble(row, e.getKey());
                 if (v != null) {
-                    out.put(id, out.get(id) + v);
+                    e.setValue(e.getValue() + v);
                 }
             }
         }

@@ -13,20 +13,43 @@
     </parent>
 
     <groupId>io.jenkins.plugins</groupId>
-    <artifactId>vmanager-charts</artifactId>
+    <artifactId>vmanager-charts-plugin</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
     <name>vManager Charts Plugin</name>
     <description>Provides trend charts across Jenkins jobs that runs Verisium Manager regressions across all relevant MDV layers</description>
     <url>https://github.com/jenkinsci/vmanager-charts-plugin</url>
+    <licenses>
+        <license>
+        <name>MIT License</name>
+        <url>http://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
 
     <properties>
-        <jenkins.version>2.479.3</jenkins.version>
-        <java.level>17</java.level>
-        <no-test-jar>false</no-test-jar>
-        <disabledTestInjection>true</disabledTestInjection>
+        <revision>1.1.1</revision>
+        <changelist>999999-SNAPSHOT</changelist>
+        <gitHubRepo>jenkinsci/vmanager-charts-plugin</gitHubRepo>
+        <findbugs.failOnError>false</findbugs.failOnError>
+        <jenkins.baseline>2.479.3</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}</jenkins.version>
     </properties>
+
+    <developers>
+        <developer>
+            <id>tyanai</id>
+            <name>Tal Yanai</name>
+            <email>tyanai@cadence.com</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
+        <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+        <url>https://github.com/${gitHubRepo}</url>
+        <tag>${scmTag}</tag>
+    </scm>
 
     <dependencyManagement>
         <dependencies>
@@ -145,4 +168,11 @@
             <url>https://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
+
+    <organization>
+        <name>Cadence</name>
+        <url>www.cadence.com</url>
+    </organization>
+    
+
 </project>

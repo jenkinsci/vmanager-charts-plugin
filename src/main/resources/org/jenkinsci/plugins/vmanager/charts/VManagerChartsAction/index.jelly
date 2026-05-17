@@ -48,8 +48,8 @@
                 </j:if>
             </div>
 
-            <script type="text/javascript" src="${resURL}/plugin/vmanager-charts/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.js"/>
-            <link rel="stylesheet" type="text/css" href="${resURL}/plugin/vmanager-charts/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.css"/>
+            <script type="text/javascript" src="${resURL}/plugin/vmanager-charts-plugin/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.js"/>
+            <link rel="stylesheet" type="text/css" href="${resURL}/plugin/vmanager-charts-plugin/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.css"/>
         </l:main-panel>
     </l:layout>
 </j:jelly>

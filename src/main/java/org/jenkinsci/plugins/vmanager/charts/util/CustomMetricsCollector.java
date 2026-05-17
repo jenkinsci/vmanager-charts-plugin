@@ -203,7 +203,7 @@ public final class CustomMetricsCollector {
         Map<String, VplanGroup> groups = new LinkedHashMap<>();
         for (MetricDefinition m : metrics) {
             String hierarchy = m.getHierarchyPath();
-            String groupKey  = (hierarchy == null) ? "" : hierarchy.trim();
+            String groupKey  = hierarchy.trim();
             VplanGroup g     = groups.get(groupKey);
             if (g == null) {
                 g = new VplanGroup(
@@ -309,7 +309,7 @@ public final class CustomMetricsCollector {
         Map<String, CoverageGroup> groups = new LinkedHashMap<>();
         for (MetricDefinition m : metrics) {
             String hierarchy = m.getCoverageHierarchy();
-            String groupKey  = (hierarchy == null) ? "" : hierarchy.trim();
+            String groupKey  = hierarchy.trim();
             CoverageGroup g  = groups.get(groupKey);
             if (g == null) {
                 g = new CoverageGroup(

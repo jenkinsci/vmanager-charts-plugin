@@ -211,10 +211,10 @@ public final class VManagerVplanClient {
     }
 
     private static void sumRow(JSONObject row, Map<String, Double> out) {
-        for (String id : out.keySet()) {
-            Double v = optDouble(row, id);
+        for (Map.Entry<String, Double> e : out.entrySet()) {
+            Double v = optDouble(row, e.getKey());
             if (v != null) {
-                out.put(id, out.get(id) + v);
+                e.setValue(e.getValue() + v);
             }
         }
     }
