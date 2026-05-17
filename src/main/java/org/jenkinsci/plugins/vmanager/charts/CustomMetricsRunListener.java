@@ -114,8 +114,12 @@ public class CustomMetricsRunListener extends RunListener<Run<?, ?>> {
         FilePath sessionsFile = VManagerChartsUtil.resolveSessionsInputFile(
                 run, workspace, property.getSessionSource(), property.getSessionInputFile());
         List<String> sessions;
+        boolean inputFileExists = false;
         try {
-            sessions = VManagerChartsUtil.readSessionNames(sessionsFile);
+            inputFileExists = sessionsFile != null && sessionsFile.exists();
+            sessions = inputFileExists
+                    ? VManagerChartsUtil.readSessionNames(sessionsFile)
+                    : java.util.Collections.<String>emptyList();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to read sessions input file "
                     + (sessionsFile == null ? "<null>" : sessionsFile.getRemote()), e);
@@ -125,11 +129,66 @@ public class CustomMetricsRunListener extends RunListener<Run<?, ?>> {
                     + ": " + e.getMessage());
             sessions = java.util.Collections.emptyList();
         }
-        if (sessionsFile != null) {
+        if (sessionsFile != null && inputFileExists) {
             BuildLog.trace(listener, "[vManager Charts] sessions input file: "
                     + sessionsFile.getRemote()
                     + " (" + sessions.size() + " session" + (sessions.size() == 1 ? "" : "s") + ")");
         }
+
+        // Fallback: if the .sessions.input file is missing (or empty), look
+        // for a sibling .session_launch.output file dropped by the vManager
+        // Jenkins Plugin in launch mode. It contains session ids, which we
+        // translate to session names via /rest/sessions/list before
+        // continuing with the normal flow.
+        FilePath launchOutput = null;
+        boolean launchOutputExists = false;
+        if (sessions.isEmpty()) {
+            launchOutput = VManagerChartsUtil.resolveSessionLaunchOutputFile(
+                    run, sessionsFile, workspace);
+            try {
+                launchOutputExists = launchOutput != null && launchOutput.exists();
+                if (launchOutputExists) {
+                    List<String> ids = VManagerChartsUtil.readSessionNames(launchOutput);
+                    BuildLog.trace(listener,
+                            "[vManager Charts] sessions input file missing; using launch output: "
+                                    + launchOutput.getRemote()
+                                    + " (" + ids.size() + " id" + (ids.size() == 1 ? "" : "s") + ")");
+                    LOGGER.log(Level.FINE,
+                            "sessions fallback: reading ids from {0} ({1} id(s))",
+                            new Object[]{ launchOutput.getRemote(), ids.size() });
+                    if (!ids.isEmpty()) {
+                        sessions = VManagerSessionsClient.fetchSessionNamesByIds(
+                                serverUrl, ids, creds, listener);
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to resolve sessions from launch-output file "
+                        + (launchOutput == null ? "<null>" : launchOutput.getRemote()), e);
+                listener.getLogger().println(
+                        "[vManager Charts] WARNING: could not resolve sessions from launch-output file "
+                                + (launchOutput == null ? "<null>" : launchOutput.getRemote())
+                                + ": " + e.getMessage());
+            }
+        }
+
+        // Always-shown diagnostic when neither source produced any session
+        // names. Without this, downstream charts silently record zeros and
+        // there's nothing in the build console to explain why.
+        if (sessions.isEmpty()) {
+            String inputPath  = sessionsFile  == null ? "<no workspace>" : sessionsFile.getRemote();
+            String launchPath = launchOutput  == null ? "<no workspace>" : launchOutput.getRemote();
+            listener.getLogger().println(
+                    "[vManager Charts] WARNING: no sessions resolved for this build. "
+                            + "Tried sessions input file: " + inputPath
+                            + (inputFileExists ? " (present, empty)" : " (not found)")
+                            + "; tried launch-output file: " + launchPath
+                            + (launchOutputExists ? " (present, empty/unresolved)" : " (not found)")
+                            + ". Custom-metric values will be recorded as 0 for this build.");
+            LOGGER.log(Level.WARNING,
+                    "No sessions resolved (input={0} present={1}, launch={2} present={3})",
+                    new Object[]{ inputPath, inputFileExists, launchPath, launchOutputExists });
+        }
+
         for (String s : sessions) {
             BuildLog.trace(listener, "[vManager Charts]   session: " + s);
         }
@@ -270,7 +329,7 @@ public class CustomMetricsRunListener extends RunListener<Run<?, ?>> {
         String requested = guiProperty.getConfigFilePath();
         FilePath cfg;
         if (requested == null || requested.isBlank()) {
-            cfg = workspace.child("vmanager-charts.config.json");
+            cfg = workspace.child("vmanager-charts-config.json");
         } else {
             // Allow either workspace-relative or absolute paths.
             FilePath asAbs = new FilePath(workspace.getChannel(), requested);

@@ -7,7 +7,11 @@ import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Thin client around the vManager {@code /rest/sessions/list} endpoint
@@ -31,8 +35,95 @@ import java.util.Collection;
  */
 public final class VManagerSessionsClient {
 
+    private static final Logger LOGGER = Logger.getLogger(VManagerSessionsClient.class.getName());
+
     private VManagerSessionsClient() {
         // static utility
+    }
+
+    /**
+     * Translates a list of session <em>ids</em> (e.g. lines of a
+     * {@code .session_launch.output} file produced by the vManager Jenkins
+     * Plugin in launch mode) into a list of session <em>names</em> by
+     * POSTing to {@code /rest/sessions/list} with an {@code .InFilter}
+     * over {@code id} and a {@code SELECTION_ONLY} projection of
+     * {@code name}.
+     *
+     * <p>Trace lines mirror the rest of the plugin: the outbound URL /
+     * headers / payload and the response summary go to the build console
+     * when {@link BuildLog#isVerbose()} is on, and the same information is
+     * mirrored to Jenkins' system log at {@link Level#FINE}.</p>
+     *
+     * @return the session names returned by the server (empty if the input
+     *         is empty, the base URL is blank, or the response shape is
+     *         unexpected). Never {@code null}.
+     */
+    public static List<String> fetchSessionNamesByIds(
+            String baseUrl,
+            Collection<String> ids,
+            StandardUsernamePasswordCredentials creds,
+            TaskListener listener) throws IOException {
+
+        List<String> out = new ArrayList<>();
+        if (ids == null || ids.isEmpty()
+                || baseUrl == null || baseUrl.isBlank()) {
+            return out;
+        }
+
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        String url  = base + "/rest/sessions/list";
+
+        JSONObject filter = new JSONObject();
+        filter.put("@c",      ".InFilter");
+        filter.put("attName", "id");
+        filter.put("values",  JSONArray.fromObject(ids));
+        filter.put("operand", "IN");
+
+        JSONArray selection = new JSONArray();
+        selection.add("name");
+
+        JSONObject projection = new JSONObject();
+        projection.put("type",      "SELECTION_ONLY");
+        projection.put("selection", selection);
+
+        JSONObject body = new JSONObject();
+        body.put("filter",     filter);
+        body.put("projection", projection);
+
+        String payload = body.toString();
+        LOGGER.log(Level.FINE,
+                "POST {0} (ids={1}, creds={2})",
+                new Object[]{ url, ids.size(),
+                              creds == null ? "<none>" : creds.getId() });
+        logPost(listener, url, payload, creds);
+
+        String responseBody = VManagerHttpClient.postJson(url, payload, creds);
+
+        Object parsed = JSONSerializer.toJSON(responseBody);
+        if (!(parsed instanceof JSONArray)) {
+            LOGGER.log(Level.FINE,
+                    "sessions/list (by id): unexpected response shape — {0}",
+                    parsed == null ? "<null>" : parsed.getClass().getSimpleName());
+            return out;
+        }
+        JSONArray rows = (JSONArray) parsed;
+        for (int i = 0; i < rows.size(); i++) {
+            Object rowObj = rows.get(i);
+            if (!(rowObj instanceof JSONObject)) continue;
+            JSONObject row = (JSONObject) rowObj;
+            if (!row.has("name") || row.get("name") == null) continue;
+            String name = String.valueOf(row.get("name")).trim();
+            if (!name.isEmpty()) out.add(name);
+        }
+        LOGGER.log(Level.FINE,
+                "sessions/list (by id): resolved {0} name(s) from {1} id(s)",
+                new Object[]{ out.size(), ids.size() });
+        if (listener != null && BuildLog.isVerbose()) {
+            listener.getLogger().println(
+                    "[vManager Charts]   sessions/list (by id): resolved "
+                            + out.size() + " name(s) from " + ids.size() + " id(s)");
+        }
+        return out;
     }
 
     /**

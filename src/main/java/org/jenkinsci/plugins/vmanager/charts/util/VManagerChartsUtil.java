@@ -6,9 +6,16 @@ import hudson.model.Run;
 import org.jenkinsci.plugins.vmanager.charts.VManagerChartsJobProperty;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utility helpers for the vManager Charts plugin.
@@ -30,8 +37,17 @@ import java.util.List;
  */
 public final class VManagerChartsUtil {
 
+    private static final Logger LOGGER = Logger.getLogger(VManagerChartsUtil.class.getName());
+
     /** Suffix used for the conventional per-build session-input file. */
     public static final String SESSIONS_INPUT_SUFFIX = ".sessions.input";
+
+    /**
+     * Suffix of the per-build file dropped by the vManager Jenkins Plugin
+     * (launch mode) listing the IDs of the sessions it just kicked off.
+     * Used as a fallback when {@link #SESSIONS_INPUT_SUFFIX} is missing.
+     */
+    public static final String SESSION_LAUNCH_OUTPUT_SUFFIX = ".session_launch.output";
 
     private VManagerChartsUtil() {
         // utility class
@@ -45,12 +61,117 @@ public final class VManagerChartsUtil {
     }
 
     /**
-     * Best-effort lookup of the build's workspace. Pipeline ({@code WorkflowRun})
-     * builds do not have a single workspace, so {@code null} may be returned.
+     * @return the conventional fallback file name for this run, e.g.
+     *         {@code 42.42.session_launch.output} — a list of session ids
+     *         produced by the vManager Jenkins Plugin in launch mode.
+     */
+    public static String defaultSessionLaunchOutputFileName(Run<?, ?> run) {
+        return run.getNumber() + "." + run.getId() + SESSION_LAUNCH_OUTPUT_SUFFIX;
+    }
+
+    /**
+     * Resolves the {@link FilePath} of the fallback {@code .session_launch.output}
+     * file. We place it next to the resolved sessions-input file (so a
+     * custom user path's directory is honoured); if no input file is known
+     * we fall back to the workspace root.
+     *
+     * @return the {@link FilePath} that <em>should</em> contain the session
+     *         ids (the file may or may not actually exist), or {@code null}
+     *         when neither a sessions-input file nor a workspace is available.
+     */
+    public static FilePath resolveSessionLaunchOutputFile(Run<?, ?> run,
+                                                          FilePath sessionsInputFile,
+                                                          FilePath workspace) {
+        String defaultName = defaultSessionLaunchOutputFileName(run);
+        if (sessionsInputFile != null) {
+            FilePath parent = sessionsInputFile.getParent();
+            if (parent != null) {
+                return parent.child(defaultName);
+            }
+        }
+        return workspace == null ? null : workspace.child(defaultName);
+    }
+
+    /**
+     * Best-effort lookup of the build's workspace.
+     *
+     * <p>For freestyle ({@code AbstractBuild}) jobs this is straightforward.
+     * For Pipeline ({@code WorkflowRun}) jobs there is no single workspace
+     * for the whole build, so we walk the flow graph (via reflection so we
+     * don't take a hard dependency on workflow-api at runtime) and return
+     * the workspace of the most recent {@code node { }} block. This is the
+     * directory where the vManager Jenkins Plugin would have dropped the
+     * {@code .sessions.input} / {@code .session_launch.output} files.</p>
      */
     public static FilePath getCurrentWorkspace(Run<?, ?> run) {
         if (run instanceof AbstractBuild) {
             return ((AbstractBuild<?, ?>) run).getWorkspace();
+        }
+        return findPipelineWorkspace(run);
+    }
+
+    /**
+     * Reflection-based lookup of a Pipeline build's workspace. Returns the
+     * workspace of the most recently visited {@code node { }} block (BFS from
+     * the flow heads towards parents), or {@code null} if no such workspace
+     * is recorded on the flow graph.
+     */
+    private static FilePath findPipelineWorkspace(Run<?, ?> run) {
+        try {
+            Method getExecution = run.getClass().getMethod("getExecution");
+            Object exec = getExecution.invoke(run);
+            if (exec == null) return null;
+
+            Object headsObj = exec.getClass().getMethod("getCurrentHeads").invoke(exec);
+            if (!(headsObj instanceof List)) return null;
+
+            ClassLoader cl = exec.getClass().getClassLoader();
+            Class<?> wsActionClass;
+            try {
+                wsActionClass = Class.forName(
+                        "org.jenkinsci.plugins.workflow.actions.WorkspaceAction", false, cl);
+            } catch (ClassNotFoundException cnf) {
+                return null;
+            }
+
+            Deque<Object> queue = new ArrayDeque<>();
+            for (Object h : (List<?>) headsObj) {
+                if (h != null) queue.add(h);
+            }
+            Set<String> seen = new HashSet<>();
+            while (!queue.isEmpty()) {
+                Object node = queue.poll();
+                String id;
+                try {
+                    id = (String) node.getClass().getMethod("getId").invoke(node);
+                } catch (Throwable t) {
+                    id = String.valueOf(System.identityHashCode(node));
+                }
+                if (!seen.add(id)) continue;
+
+                Object action = node.getClass()
+                        .getMethod("getAction", Class.class)
+                        .invoke(node, wsActionClass);
+                if (action != null) {
+                    Object ws = action.getClass().getMethod("getWorkspace").invoke(action);
+                    if (ws instanceof FilePath) {
+                        return (FilePath) ws;
+                    }
+                    if (ws instanceof String) {
+                        // Older WorkspaceAction returns the remote path as String.
+                        return new FilePath(new java.io.File((String) ws));
+                    }
+                }
+
+                Object parents = node.getClass().getMethod("getParents").invoke(node);
+                if (parents instanceof List) {
+                    for (Object p : (List<?>) parents) {
+                        if (p != null) queue.add(p);
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.log(Level.FINE, "Pipeline workspace lookup failed", t);
         }
         return null;
     }

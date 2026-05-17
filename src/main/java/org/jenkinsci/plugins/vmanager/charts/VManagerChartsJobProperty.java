@@ -75,7 +75,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
     /**
      * When {@link #configSource} = "FILE", absolute or workspace-relative
      * path to the JSON file. When blank, the listener looks for
-     * {@code vmanager-charts.config.json} in the build's workspace.
+     * {@code vmanager-charts-config.json} in the build's workspace.
      */
     private String configFilePath = "";
 
@@ -366,7 +366,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
             String body = JsonConfigLoader.toJson(bound);
             rsp.setContentType("application/json;charset=UTF-8");
             rsp.setHeader("Content-Disposition",
-                    "attachment; filename=\"vmanager-charts.config.json\"");
+                    "attachment; filename=\"vmanager-charts-config.json\"");
             byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             rsp.setContentLength(bytes.length);
             rsp.getOutputStream().write(bytes);
