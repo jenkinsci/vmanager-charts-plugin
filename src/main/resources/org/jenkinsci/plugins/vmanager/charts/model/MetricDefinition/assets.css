@@ -1,0 +1,25 @@
+.vmp-metric-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+.vmp-metric-row > .jenkins-form-item,
+.vmp-metric-row > div.tr,
+.vmp-metric-row > tr {
+    flex: 1 1 220px;
+    min-width: 200px;
+}
+/* The Attribute combobox (second column) tends to be the longest value. */
+.vmp-metric-row > .jenkins-form-item:nth-child(2),
+.vmp-metric-row > div.tr:nth-child(2),
+.vmp-metric-row > tr:nth-child(2) {
+    flex: 2 1 320px;
+}
+/* Match select / combobox widths to the flex column. */
+.vmp-metric-row select,
+.vmp-metric-row input.combobox2,
+.vmp-metric-row input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+}

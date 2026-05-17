@@ -1,0 +1,60 @@
+﻿
+        .vmp-charts-root .vmp-help-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            margin-left: 6px;
+            padding: 0;
+            border: 1px solid var(--text-color-secondary, #888);
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-color-secondary, #888);
+            font-size: 11px;
+            line-height: 1;
+            font-weight: bold;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .vmp-charts-root .vmp-help-btn:hover {
+            color: var(--accent-color, #0b6fcb);
+            border-color: var(--accent-color, #0b6fcb);
+        }
+        .vmp-charts-root .vmp-help-panel {
+            display: none;
+            margin: 4px 0 6px;
+            padding: 8px 10px;
+            border-left: 3px solid var(--accent-color, #0b6fcb);
+            background: var(--card-background, rgba(0,0,0,0.04));
+            color: var(--text-color, inherit);
+            font-size: 0.85rem;
+            border-radius: 0 4px 4px 0;
+        }
+        .vmp-charts-root .vmp-help-panel.vmp-open { display: block; }
+        /* When the help panel is open we hide the original description so it
+           doesn't appear twice. We always hide the original description for
+           non-checkbox rows (it's now in the panel). */
+        .vmp-charts-root .vmp-helped > .jenkins-form-description,
+        .vmp-charts-root .vmp-helped .jenkins-form-description {
+            display: none !important;
+        }
+        /* Lay vManager Server URL and Credentials side-by-side. */
+        .vmp-server-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .vmp-server-row > .jenkins-form-item,
+        .vmp-server-row > div.tr,
+        .vmp-server-row > tr {
+            flex: 1 1 280px;
+            min-width: 220px;
+        }
+        .vmp-server-row input[type="text"],
+        .vmp-server-row select {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    

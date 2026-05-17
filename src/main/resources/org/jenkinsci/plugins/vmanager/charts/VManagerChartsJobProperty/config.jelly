@@ -1,16 +1,17 @@
-<?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+﻿<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+    <st:adjunct includes="org.jenkinsci.plugins.vmanager.charts.VManagerChartsJobProperty.assets"/>
     <!--
         Fetch-dedup wrapper: collapse the many identical vManager-backed
         fill REST calls that Jenkins fires on page load (one per chart row
         for vPlan paths, and one per metric row for each entity-type
         attribute list) into at most one network request per distinct
         result set:
-            * AttributeNameItems is keyed by entityType   (≤ 3 keys)
+            * AttributeNameItems is keyed by entityType   (ג‰₪ 3 keys)
             * VPlanPathItems     is keyed by URL          (1 key)
 
         On page load every visible row still triggers a fetch through
-        Jenkins' combobox2 — but only the first fetch for each key
+        Jenkins' combobox2 ג€” but only the first fetch for each key
         actually leaves the browser. All other concurrent / later fetches
         are served from a cloned cached Response, so the per-row response
         interceptors in MetricDefinition / ChartDefinition still see a
@@ -20,73 +21,6 @@
         Installed as the FIRST script in this jelly so we wrap fetch
         BEFORE Jenkins' combobox initialization runs.
     -->
-    <script>
-(function () {
-    if (window.__vmpFetchDedupInstalled) return;
-    window.__vmpFetchDedupInstalled = true;
-
-    var cache = {};   // key -> Promise&lt;Response&gt; (un-consumed; cloned per caller)
-
-    function paramFromUrl(url, name) {
-        var m = new RegExp('[?&amp;]' + name + '=([^&amp;]*)').exec(url || '');
-        return m ? decodeURIComponent(m[1]) : '';
-    }
-    function paramFromBody(body, name) {
-        if (!body) return '';
-        try {
-            if (body instanceof FormData) {
-                var v = body.get(name);
-                return v != null ? String(v) : '';
-            }
-            var s = (typeof body === 'string') ? body
-                  : (body instanceof URLSearchParams) ? body.toString()
-                  : (typeof body.toString === 'function') ? body.toString()
-                  : '';
-            var m = new RegExp('(?:^|&amp;)' + name + '=([^&amp;]*)').exec(s);
-            return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
-        } catch (e) { return ''; }
-    }
-
-    function keyFor(url, init) {
-        if (/AttributeNameItems/.test(url)) {
-            var ent = paramFromUrl(url, 'entityType')
-                   || paramFromBody(init &amp;&amp; init.body, 'entityType');
-            return 'attr:' + ent;
-        }
-        if (/VPlanPathItems/.test(url)) {
-            return 'vplan';
-        }
-        return null;
-    }
-
-    var origFetch = window.fetch;
-    window.fetch = function (input, init) {
-        var url = (typeof input === 'string') ? input
-                : (input &amp;&amp; input.url) ? input.url : '';
-        var key = keyFor(url, init);
-        if (!key) return origFetch.apply(this, arguments);
-
-        if (!cache[key]) {
-            // First request for this key: actually hit the network.
-            // Store the un-consumed Response so callers can clone it.
-            cache[key] = origFetch.apply(this, arguments).then(
-                function (rsp) {
-                    if (!rsp.ok) delete cache[key];   // don't cache failures
-                    return rsp;
-                },
-                function (err) {
-                    delete cache[key];
-                    throw err;
-                }
-            );
-        }
-        // Every caller (including the very first) gets a fresh clone so
-        // its body stream is independent of the cached Response and of
-        // any other caller's clone.
-        return cache[key].then(function (rsp) { return rsp.clone(); });
-    };
-})();
-    </script>
     <!--
         Help-icon styling (scoped to .vmp-charts-root, which wraps the entire
         plugin block including child Jellies for ChartDefinition / MetricDefinition).
@@ -95,66 +29,6 @@
         description text.
         For CHECKBOX fields we keep Jenkins' built-in help icon (see help-*.html).
     -->
-    <style>
-        .vmp-charts-root .vmp-help-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            margin-left: 6px;
-            padding: 0;
-            border: 1px solid var(--text-color-secondary, #888);
-            border-radius: 50%;
-            background: transparent;
-            color: var(--text-color-secondary, #888);
-            font-size: 11px;
-            line-height: 1;
-            font-weight: bold;
-            cursor: pointer;
-            vertical-align: middle;
-        }
-        .vmp-charts-root .vmp-help-btn:hover {
-            color: var(--accent-color, #0b6fcb);
-            border-color: var(--accent-color, #0b6fcb);
-        }
-        .vmp-charts-root .vmp-help-panel {
-            display: none;
-            margin: 4px 0 6px;
-            padding: 8px 10px;
-            border-left: 3px solid var(--accent-color, #0b6fcb);
-            background: var(--card-background, rgba(0,0,0,0.04));
-            color: var(--text-color, inherit);
-            font-size: 0.85rem;
-            border-radius: 0 4px 4px 0;
-        }
-        .vmp-charts-root .vmp-help-panel.vmp-open { display: block; }
-        /* When the help panel is open we hide the original description so it
-           doesn't appear twice. We always hide the original description for
-           non-checkbox rows (it's now in the panel). */
-        .vmp-charts-root .vmp-helped > .jenkins-form-description,
-        .vmp-charts-root .vmp-helped .jenkins-form-description {
-            display: none !important;
-        }
-        /* Lay vManager Server URL and Credentials side-by-side. */
-        .vmp-server-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: flex-start;
-        }
-        .vmp-server-row > .jenkins-form-item,
-        .vmp-server-row > div.tr,
-        .vmp-server-row > tr {
-            flex: 1 1 280px;
-            min-width: 220px;
-        }
-        .vmp-server-row input[type="text"],
-        .vmp-server-row select {
-            width: 100%;
-            box-sizing: border-box;
-        }
-    </style>
     <div class="vmp-charts-root">
     <f:optionalBlock name="enabled"
                      title="Enable vManager Charts"
@@ -175,7 +49,7 @@
         </div>
         <f:entry title="vManager Session"
                  field="sessionSource"
-                 description="How the vManager session name(s) executed by this build are obtained. Choose 'Leverage vManager Jenkins Plugin Information' to use the data recorded by the vManager Jenkins Plugin during the build, or 'Input file name' to read session names from a text file (one session name per line). The session-source choice is always taken from this GUI — never from a JSON file.">
+                 description="How the vManager session name(s) executed by this build are obtained. Choose 'Leverage vManager Jenkins Plugin Information' to use the data recorded by the vManager Jenkins Plugin during the build, or 'Input file name' to read session names from a text file (one session name per line). The session-source choice is always taken from this GUI ג€” never from a JSON file.">
             <f:select/>
         </f:entry>
         <div class="vmp-session-file-cond" style="display:none;">
@@ -186,7 +60,7 @@
             </f:entry>
         </div>
         <f:section title="Charts configuration"/>
-        <f:entry description="Choose where the chart selection and Custom Chart definitions come from. Server URL, credentials and vManager Session above are always taken from this GUI — even when 'JSON file from workspace' is selected.">
+        <f:entry description="Choose where the chart selection and Custom Chart definitions come from. Server URL, credentials and vManager Session above are always taken from this GUI ג€” even when 'JSON file from workspace' is selected.">
             <span style="font-size:0.85rem;">
                 Pick GUI to configure charts here, or JSON file to load the
                 entire chart selection (built-in charts and Custom Charts) from
@@ -247,7 +121,7 @@
                     Downloads the entire chart configuration shown above
                     (built-in chart selection + every Custom Chart with its
                     metric series) as a JSON file. Server URL, credentials and
-                    vManager Session are intentionally excluded — they are
+                    vManager Session are intentionally excluded ג€” they are
                     always taken from this GUI at build time.
                 </span>
             </f:entry>
@@ -269,346 +143,15 @@
                  help="${descriptor.getHelpFile('verboseLogging')}">
             <f:checkbox name="verboseLogging" checked="${instance != null and instance.verboseLogging}"/>
         </f:entry>
-        <script>
-(function () {
-    if (window.__vmpSessionSrcHooked) return;
-    window.__vmpSessionSrcHooked = true;
-
-    function syncByName(root, selectName, condClass) {
-        var sel = (root || document).querySelector('select[name$="' + selectName + '"]');
-        if (!sel) return;
-        var scope = sel.closest('.vmp-charts-root, form, body');
-        if (!scope) return;
-        var cond = scope.querySelector('.' + condClass);
-        if (!cond) return;
-        cond.style.display = (sel.value === 'FILE') ? '' : 'none';
-        if (!sel.__vmpSyncBound) {
-            sel.__vmpSyncBound = true;
-            sel.addEventListener('change', function () {
-                cond.style.display = (sel.value === 'FILE') ? '' : 'none';
-            });
-        }
-    }
-
-    function sync(root) {
-        syncByName(root, 'sessionSource', 'vmp-session-file-cond');
-    }
-
-    new MutationObserver(function () { sync(); })
-        .observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { sync(); });
-    } else {
-        sync();
-    }
-})();
-        </script>
-        <!-- Export configuration button: POSTs the live form (via Jenkins'
+    <!-- Export configuration button: POSTs the live form (via Jenkins'
              buildFormTree) to the descriptor's doExportConfig endpoint, which
              extracts our subtree, binds it (including all Custom Charts /
              metrics / refinement files), strips credentials, and streams a
              canonical JSON file back as a download. -->
-        <script>
-(function () {
-    if (window.__vmpExportHooked) return;
-    window.__vmpExportHooked = true;
-
-    function getCrumb() {
-        var meta = document.querySelector('meta[name="crumb"]');
-        if (meta) {
-            return {
-                fieldName: meta.getAttribute('crumb-field') || 'Jenkins-Crumb',
-                value:     meta.getAttribute('crumb-value') || meta.getAttribute('content') || ''
-            };
-        }
-        if (typeof window.crumb !== 'undefined' &amp;&amp; window.crumb &amp;&amp; window.crumb.value) {
-            return {
-                fieldName: window.crumb.fieldName || 'Jenkins-Crumb',
-                value:     window.crumb.value
-            };
-        }
-        return null;
-    }
-
-    function rootURL() {
-        var meta = document.querySelector('meta[name="ROOT_URL"]');
-        if (meta &amp;&amp; meta.content) return meta.content.replace(/\/$/, '');
-        if (typeof window.rootURL === 'string') return window.rootURL.replace(/\/$/, '');
-        var head = document.querySelector('head');
-        if (head &amp;&amp; head.dataset &amp;&amp; head.dataset.rooturl) return head.dataset.rooturl.replace(/\/$/, '');
-        return '';
-    }
-
-    function endpoint() {
-        return rootURL()
-            + '/descriptorByName/org.jenkinsci.plugins.vmanager.charts.VManagerChartsJobProperty/exportConfig';
-    }
-
-    function downloadBlob(blob, filename) {
-        var url = URL.createObjectURL(blob);
-        var a   = document.createElement('a');
-        a.href     = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-    }
-
-    function onClick(btn) {
-        var form = btn.closest('form');
-        if (!form) {
-            alert('vManager Charts: could not find the surrounding form.');
-            return;
-        }
-        if (typeof buildFormTree !== 'function') {
-            alert('vManager Charts: Jenkins form-builder (buildFormTree) is not available; cannot export.');
-            return;
-        }
-        var tree;
-        try {
-            buildFormTree(form);
-            // After buildFormTree(), Jenkins stores the JSON in the form's
-            // hidden "json" input; that's the exact same payload Jenkins'
-            // own "Save" button submits.
-            var jsonInput = form.querySelector('input[name="json"]');
-            tree = jsonInput ? jsonInput.value : null;
-        } catch (e) {
-            alert('vManager Charts: failed to read form data: ' + (e &amp;&amp; e.message ? e.message : e));
-            return;
-        }
-        if (!tree) {
-            alert('vManager Charts: form has no serialized JSON payload.');
-            return;
-        }
-
-        var fd = new FormData();
-        fd.append('json', tree);
-
-        var crumb   = getCrumb();
-        var headers = {};
-        if (crumb &amp;&amp; crumb.value) {
-            headers[crumb.fieldName] = crumb.value;
-            fd.append(crumb.fieldName, crumb.value);
-        }
-
-        btn.disabled = true;
-        var origText = btn.textContent;
-        btn.textContent = 'Exporting…';
-
-        fetch(endpoint(), {
-            method:      'POST',
-            body:        fd,
-            headers:     headers,
-            credentials: 'same-origin'
-        }).then(function (r) {
-            if (!r.ok) {
-                return r.text().then(function (t) {
-                    throw new Error('HTTP ' + r.status + ': ' + (t || r.statusText));
-                });
-            }
-            return r.blob();
-        }).then(function (blob) {
-            downloadBlob(blob, 'vmanager-charts-config.json');
-        }).catch(function (err) {
-            alert('vManager Charts: export failed — ' + (err &amp;&amp; err.message ? err.message : err));
-        }).then(function () {
-            btn.disabled = false;
-            btn.textContent = origText;
-        });
-    }
-
-    function attach() {
-        document.querySelectorAll('.vmp-charts-root .vmp-export-btn').forEach(function (btn) {
-            if (btn.__vmpExportBound) return;
-            btn.__vmpExportBound = true;
-            btn.addEventListener('click', function (ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                onClick(btn);
-            });
-        });
-    }
-
-    new MutationObserver(attach).observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attach);
-    } else {
-        attach();
-    }
-})();
-        </script>
-        <!-- Hard-block save when vManager Server URL is blank: red outline +
+    <!-- Hard-block save when vManager Server URL is blank: red outline +
              inline error + capture-phase form submit guard. Mirrors the
              attribute-name guard in the metric config so the user gets
              instant feedback and stays on the page. -->
-        <script>
-(function () {
-    if (window.__vmpServerUrlGuarded) return;
-    window.__vmpServerUrlGuarded = true;
-
-    function findWrap(inp) {
-        return inp.closest('.jenkins-form-item, .setting-main') || inp.parentElement;
-    }
-    function clearErr(inp) {
-        inp.style.outline = '';
-        var w = findWrap(inp);
-        if (w) {
-            var e = w.querySelector('.vmp-server-url-err');
-            if (e) e.remove();
-        }
-    }
-    function showErr(inp, msg) {
-        inp.style.outline = '2px solid var(--error-color, #c33)';
-        var w = findWrap(inp);
-        if (!w) return;
-        var e = w.querySelector('.vmp-server-url-err');
-        if (!e) {
-            e = document.createElement('div');
-            e.className = 'vmp-server-url-err';
-            e.style.color = 'var(--error-color, #c33)';
-            e.style.fontSize = '0.8rem';
-            e.style.marginTop = '2px';
-            w.appendChild(e);
-        }
-        e.textContent = msg;
-    }
-    function isEnabledBlock(inp) {
-        // The whole block sits inside an f:optionalBlock named 'enabled'.
-        // If the block is not checked the input won't be visible (offsetParent
-        // null) so we rely on that as the gate.
-        return inp.offsetParent !== null;
-    }
-    function validate(inp) {
-        if (!isEnabledBlock(inp)) { clearErr(inp); return true; }
-        var v = (inp.value || '').trim();
-        if (v === '') {
-            showErr(inp, 'vManager Server URL is required.');
-            return false;
-        }
-        if (!/^https?:\/\//i.test(v)) {
-            showErr(inp, 'URL must start with http:// or https://');
-            return false;
-        }
-        clearErr(inp);
-        return true;
-    }
-    function attachAll() {
-        document.querySelectorAll('input.vmp-server-url').forEach(function (inp) {
-            if (inp.__vmpUrlHooked) return;
-            inp.__vmpUrlHooked = true;
-            inp.addEventListener('input', function () { validate(inp); });
-            inp.addEventListener('blur',  function () { validate(inp); });
-        });
-        var form = document.querySelector('form[name="config"]')
-                || document.querySelector('#main-panel form')
-                || document.querySelector('form');
-        if (form &amp;&amp; !form.__vmpUrlSubmitHooked) {
-            form.__vmpUrlSubmitHooked = true;
-            form.addEventListener('submit', function (ev) {
-                var bad = Array.from(document.querySelectorAll('input.vmp-server-url'))
-                                .filter(function (inp) { return !validate(inp); });
-                if (bad.length === 0) return;
-                ev.preventDefault();
-                ev.stopImmediatePropagation();
-                bad[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
-                setTimeout(function () { bad[0].focus(); }, 100);
-            }, true);
-        }
-    }
-    new MutationObserver(attachAll).observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attachAll);
-    } else {
-        attachAll();
-    }
-})();
-        </script>
     </f:optionalBlock>
     </div>
-    <j:if test="${true}">
-        <script>
-(function () {
-    if (window.__vmpHelpBtnInstalled) return;
-    window.__vmpHelpBtnInstalled = true;
-
-    function isCheckboxRow(formItem) {
-        // f:entry containing a checkbox or radio uses Jenkins' built-in
-        // help — skip so we don't add a duplicate / mis-placed '?' icon.
-        return !!formItem.querySelector('input[type="checkbox"], input[type="radio"]');
-    }
-
-    function findTitleEl(formItem) {
-        return formItem.querySelector('.jenkins-form-label')
-            || formItem.querySelector('label.attach-previous')
-            || formItem.querySelector('.setting-name')
-            || formItem.querySelector('legend')
-            || formItem.querySelector('label');
-    }
-
-    function process(formItem) {
-        if (formItem.__vmpHelped) return;
-        if (isCheckboxRow(formItem)) {
-            formItem.__vmpHelped = true; // skip silently
-            return;
-        }
-        var desc = formItem.querySelector('.jenkins-form-description');
-        if (!desc) return;
-        var text = (desc.textContent || '').trim();
-        if (!text) return;
-        var title = findTitleEl(formItem);
-        if (!title) return;
-        // DOM-level dedupe: don't add a second "?" if one is already there.
-        if (title.querySelector('.vmp-help-btn')) {
-            formItem.__vmpHelped = true;
-            return;
-        }
-        formItem.__vmpHelped = true;
-        formItem.classList.add('vmp-helped');
-
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'vmp-help-btn';
-        btn.textContent = '?';
-        btn.setAttribute('aria-label', 'Show help');
-        btn.title = 'Show help';
-
-        var panel = document.createElement('div');
-        panel.className = 'vmp-help-panel';
-        panel.textContent = text;
-
-        // Block label-activation toggling when "?" is clicked.
-        btn.addEventListener('mousedown', function (e) {
-            e.preventDefault(); e.stopPropagation();
-        });
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            panel.classList.toggle('vmp-open');
-        });
-
-        title.appendChild(btn);
-        if (title.parentNode) {
-            title.parentNode.insertBefore(panel, title.nextSibling);
-        }
-    }
-
-    function scan() {
-        document.querySelectorAll('.vmp-charts-root .jenkins-form-item')
-            .forEach(process);
-    }
-
-    var t;
-    function schedule() { clearTimeout(t); t = setTimeout(scan, 50); }
-
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', schedule);
-    } else {
-        schedule();
-    }
-})();
-        </script>
-    </j:if>
-</j:jelly>
+    </j:jelly>

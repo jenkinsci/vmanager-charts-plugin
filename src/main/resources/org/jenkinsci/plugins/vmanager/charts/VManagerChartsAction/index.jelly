@@ -8,11 +8,8 @@
             <st:adjunct includes="io.jenkins.plugins.echarts"/>
 
             <st:bind var="vManagerChartsProxy" value="${it}"/>
-            <script type="text/javascript">
-                window.vManagerChartsRootUrl = "${rootURL}";
-            </script>
 
-            <div class="vmanager-charts-container">
+            <div class="vmanager-charts-container" data-root-url="${rootURL}">
                 <!-- Build Duration Chart -->
                 <j:if test="${it.showBuildDuration}">
                     <div class="chart-section">
@@ -48,8 +45,7 @@
                 </j:if>
             </div>
 
-            <script type="text/javascript" src="${resURL}/plugin/vmanager-charts/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.js"/>
-            <link rel="stylesheet" type="text/css" href="${resURL}/plugin/vmanager-charts/org/jenkinsci/plugins/vmanager/charts/VManagerChartsAction/index.css"/>
+            <st:adjunct includes="org.jenkinsci.plugins.vmanager.charts.VManagerChartsAction.assets"/>
         </l:main-panel>
     </l:layout>
 </j:jelly>

@@ -12,6 +12,10 @@
     ready(initializeCharts);
 
     function initializeCharts() {
+        // Pick up the root URL injected by index.jelly as a data attribute on
+        // the container, so this script needs no inline jelly-evaluated JS.
+        var container = document.querySelector('.vmanager-charts-container');
+        window.vManagerChartsRootUrl = (container && container.dataset.rootUrl) || '';
         if (typeof echarts === 'undefined') {
             console.error('[vManager Charts] echarts library not loaded.');
             return;

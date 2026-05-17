@@ -1,0 +1,40 @@
+﻿
+        .vmp-chart-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .vmp-chart-row > .jenkins-form-item,
+        .vmp-chart-row > div.tr,
+        .vmp-chart-row > tr {
+            flex: 1 1 200px;
+            min-width: 180px;
+        }
+        /* Chart Title (first column) gets a bit more room. */
+        .vmp-chart-row > .jenkins-form-item:nth-child(1),
+        .vmp-chart-row > div.tr:nth-child(1),
+        .vmp-chart-row > tr:nth-child(1) {
+            flex: 2 1 260px;
+        }
+        /* Max Builds column is compact. */
+        .vmp-chart-row > .jenkins-form-item:nth-child(4),
+        .vmp-chart-row > div.tr:nth-child(4),
+        .vmp-chart-row > tr:nth-child(4) {
+            flex: 0 1 140px;
+            min-width: 120px;
+        }
+        .vmp-chart-row select,
+        .vmp-chart-row input.combobox2,
+        .vmp-chart-row input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        /* Inline error styling for missing required Chart Title / Max Builds */
+        .vmp-chart-title-err,
+        .vmp-chart-maxbuilds-err {
+            color: var(--error-color, #c33);
+            font-size: 0.8rem;
+            margin-top: 2px;
+        }
+    
