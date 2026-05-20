@@ -32,7 +32,14 @@
             return 'attr:' + ent;
         }
         if (/VPlanPathItems/.test(url)) {
-            return 'vplan';
+            // Key by vPlanType + serverUrl so the (empty) result Jenkins
+            // fetches on page-load while vPlanType is still "" doesn't
+            // poison the cache and starve the real "DB" fetch.
+            var vt  = paramFromUrl(url, 'vPlanType')
+                   || paramFromBody(init && init.body, 'vPlanType');
+            var srv = paramFromUrl(url, 'serverUrl')
+                   || paramFromBody(init && init.body, 'serverUrl');
+            return 'vplan:' + vt + '|' + srv;
         }
         return null;
     }
@@ -226,171 +233,6 @@
         document.addEventListener('DOMContentLoaded', attach);
     } else {
         attach();
-    }
-})();
-        
-
-(function () {
-    if (window.__vmpServerUrlGuarded) return;
-    window.__vmpServerUrlGuarded = true;
-
-    function findWrap(inp) {
-        return inp.closest('.jenkins-form-item, .setting-main') || inp.parentElement;
-    }
-    function clearErr(inp) {
-        inp.style.outline = '';
-        var w = findWrap(inp);
-        if (w) {
-            var e = w.querySelector('.vmp-server-url-err');
-            if (e) e.remove();
-        }
-    }
-    function showErr(inp, msg) {
-        inp.style.outline = '2px solid var(--error-color, #c33)';
-        var w = findWrap(inp);
-        if (!w) return;
-        var e = w.querySelector('.vmp-server-url-err');
-        if (!e) {
-            e = document.createElement('div');
-            e.className = 'vmp-server-url-err';
-            e.style.color = 'var(--error-color, #c33)';
-            e.style.fontSize = '0.8rem';
-            e.style.marginTop = '2px';
-            w.appendChild(e);
-        }
-        e.textContent = msg;
-    }
-    function isEnabledBlock(inp) {
-        // The whole block sits inside an f:optionalBlock named 'enabled'.
-        // If the block is not checked the input won't be visible (offsetParent
-        // null) so we rely on that as the gate.
-        return inp.offsetParent !== null;
-    }
-    function validate(inp) {
-        if (!isEnabledBlock(inp)) { clearErr(inp); return true; }
-        var v = (inp.value || '').trim();
-        if (v === '') {
-            showErr(inp, 'vManager Server URL is required.');
-            return false;
-        }
-        if (!/^https?:\/\//i.test(v)) {
-            showErr(inp, 'URL must start with http:// or https://');
-            return false;
-        }
-        clearErr(inp);
-        return true;
-    }
-    function attachAll() {
-        document.querySelectorAll('input.vmp-server-url').forEach(function (inp) {
-            if (inp.__vmpUrlHooked) return;
-            inp.__vmpUrlHooked = true;
-            inp.addEventListener('input', function () { validate(inp); });
-            inp.addEventListener('blur',  function () { validate(inp); });
-        });
-        var form = document.querySelector('form[name="config"]')
-                || document.querySelector('#main-panel form')
-                || document.querySelector('form');
-        if (form && !form.__vmpUrlSubmitHooked) {
-            form.__vmpUrlSubmitHooked = true;
-            form.addEventListener('submit', function (ev) {
-                var bad = Array.from(document.querySelectorAll('input.vmp-server-url'))
-                                .filter(function (inp) { return !validate(inp); });
-                if (bad.length === 0) return;
-                ev.preventDefault();
-                ev.stopImmediatePropagation();
-                bad[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
-                setTimeout(function () { bad[0].focus(); }, 100);
-            }, true);
-        }
-    }
-    new MutationObserver(attachAll).observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attachAll);
-    } else {
-        attachAll();
-    }
-})();
-        
-
-(function () {
-    if (window.__vmpHelpBtnInstalled) return;
-    window.__vmpHelpBtnInstalled = true;
-
-    function isCheckboxRow(formItem) {
-        // f:entry containing a checkbox or radio uses Jenkins' built-in
-        // help ג€” skip so we don't add a duplicate / mis-placed '?' icon.
-        return !!formItem.querySelector('input[type="checkbox"], input[type="radio"]');
-    }
-
-    function findTitleEl(formItem) {
-        return formItem.querySelector('.jenkins-form-label')
-            || formItem.querySelector('label.attach-previous')
-            || formItem.querySelector('.setting-name')
-            || formItem.querySelector('legend')
-            || formItem.querySelector('label');
-    }
-
-    function process(formItem) {
-        if (formItem.__vmpHelped) return;
-        if (isCheckboxRow(formItem)) {
-            formItem.__vmpHelped = true; // skip silently
-            return;
-        }
-        var desc = formItem.querySelector('.jenkins-form-description');
-        if (!desc) return;
-        var text = (desc.textContent || '').trim();
-        if (!text) return;
-        var title = findTitleEl(formItem);
-        if (!title) return;
-        // DOM-level dedupe: don't add a second "?" if one is already there.
-        if (title.querySelector('.vmp-help-btn')) {
-            formItem.__vmpHelped = true;
-            return;
-        }
-        formItem.__vmpHelped = true;
-        formItem.classList.add('vmp-helped');
-
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'vmp-help-btn';
-        btn.textContent = '?';
-        btn.setAttribute('aria-label', 'Show help');
-        btn.title = 'Show help';
-
-        var panel = document.createElement('div');
-        panel.className = 'vmp-help-panel';
-        panel.textContent = text;
-
-        // Block label-activation toggling when "?" is clicked.
-        btn.addEventListener('mousedown', function (e) {
-            e.preventDefault(); e.stopPropagation();
-        });
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            panel.classList.toggle('vmp-open');
-        });
-
-        title.appendChild(btn);
-        if (title.parentNode) {
-            title.parentNode.insertBefore(panel, title.nextSibling);
-        }
-    }
-
-    function scan() {
-        document.querySelectorAll('.vmp-charts-root .jenkins-form-item')
-            .forEach(process);
-    }
-
-    var t;
-    function schedule() { clearTimeout(t); t = setTimeout(scan, 50); }
-
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', schedule);
-    } else {
-        schedule();
     }
 })();
         

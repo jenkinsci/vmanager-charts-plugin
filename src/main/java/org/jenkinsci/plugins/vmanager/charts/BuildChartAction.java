@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.vmanager.charts;
 
 import hudson.model.Action;
 import hudson.model.Run;
+import org.jenkinsci.plugins.vmanager.charts.util.JsonConfigLoader;
 import org.kohsuke.stapler.bind.JavaScriptMethod;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -64,8 +65,9 @@ public class BuildChartAction implements Action {
     /** Whether the Regression Optimization Chart is enabled on the parent job. */
     public boolean isShowRegressionOptimizationChart() {
         if (run == null) return false;
-        VManagerChartsJobProperty p = (VManagerChartsJobProperty)
+        VManagerChartsJobProperty gui = (VManagerChartsJobProperty)
                 run.getParent().getProperty(VManagerChartsJobProperty.class);
+        VManagerChartsJobProperty p = JsonConfigLoader.effectiveForRun(run, gui);
         return p != null && p.isEnabled()
                 && p.isShowBuildLevelCharts()
                 && p.isShowRegressionOptimizationChart();

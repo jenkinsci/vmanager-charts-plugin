@@ -5,6 +5,7 @@ import hudson.model.Action;
 import hudson.model.Job;
 import hudson.model.Run;
 import jenkins.model.TransientActionFactory;
+import org.jenkinsci.plugins.vmanager.charts.util.JsonConfigLoader;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collection;
@@ -28,8 +29,11 @@ public class BuildChartActionFactory extends TransientActionFactory<Run> {
     @Override
     public Collection<? extends Action> createFor(@NonNull Run target) {
         Job<?, ?> job = target.getParent();
-        VManagerChartsJobProperty p =
+        VManagerChartsJobProperty gui =
                 (VManagerChartsJobProperty) job.getProperty(VManagerChartsJobProperty.class);
+        // When configSource=FILE, consult the JSON the build mirrored so
+        // the build-level sidebar link reflects what the build produced.
+        VManagerChartsJobProperty p = JsonConfigLoader.effectiveForRun(target, gui);
         if (p == null || !p.isEnabled() || !p.isShowBuildLevelCharts()) {
             return Collections.emptyList();
         }

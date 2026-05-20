@@ -14,7 +14,7 @@
 
     <groupId>io.jenkins.plugins</groupId>
     <artifactId>vmanager-charts</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>${revision}-${changelist}</version>
     <packaging>hpi</packaging>
 
     <name>vManager Charts Plugin</name>
@@ -95,34 +95,13 @@
             <artifactId>workflow-job</artifactId>
             <scope>test</scope>
         </dependency>
-    </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths combine.children="append">
-                        <path>
-                            <groupId>net.java.sezpoz</groupId>
-                            <artifactId>sezpoz</artifactId>
-                            <version>1.13</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>InjectedTest.java</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+        <!-- Pipeline step API (for the 'vManagerChartHelper' step) -->
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+        </dependency>
+    </dependencies>
 
     <repositories>
         <repository>

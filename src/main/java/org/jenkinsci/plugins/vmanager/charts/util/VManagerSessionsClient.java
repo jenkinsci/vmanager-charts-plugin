@@ -403,7 +403,7 @@ public final class VManagerSessionsClient {
 
             if (total > real && max > real) {
                 out.put(name,
-                        "Session is not configured for maximum TAT. "
+                        "Session might not be configured for maximum TAT. "
                                 + "The actual number of parallel runs is lower than the maximum setting.");
             }
         }

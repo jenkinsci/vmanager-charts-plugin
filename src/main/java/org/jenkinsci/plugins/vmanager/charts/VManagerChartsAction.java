@@ -8,6 +8,7 @@ import org.jenkinsci.plugins.vmanager.charts.data.TestResultsCollector;
 import org.jenkinsci.plugins.vmanager.charts.model.ChartData;
 import org.jenkinsci.plugins.vmanager.charts.model.ChartDefinition;
 import org.jenkinsci.plugins.vmanager.charts.model.MetricDefinition;
+import org.jenkinsci.plugins.vmanager.charts.util.JsonConfigLoader;
 import org.kohsuke.stapler.bind.JavaScriptMethod;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -65,7 +66,14 @@ public class VManagerChartsAction implements Action {
     }
 
     private VManagerChartsJobProperty getProperty() {
-        return (VManagerChartsJobProperty) job.getProperty(VManagerChartsJobProperty.class);
+        VManagerChartsJobProperty gui =
+                (VManagerChartsJobProperty) job.getProperty(VManagerChartsJobProperty.class);
+        // When configSource=FILE, the GUI checkboxes (showBuildDuration, etc.)
+        // remain at their defaults because they are hidden in the form.
+        // Overlay them from the JSON file that the build listener mirrored
+        // next to the build log so this view reflects what the build is
+        // actually producing.
+        return JsonConfigLoader.effectiveForJob(job, gui);
     }
 
     public boolean isShowCustomMetrics() {

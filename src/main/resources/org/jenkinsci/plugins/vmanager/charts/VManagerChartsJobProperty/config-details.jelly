@@ -30,32 +30,23 @@
         For CHECKBOX fields we keep Jenkins' built-in help icon (see help-*.html).
     -->
     <div class="vmp-charts-root">
-    <f:optionalBlock name="enabled"
-                     title="Enable vManager Charts"
-                     checked="${instance != null and instance.enabled}"
-                     help="${descriptor.getHelpFile('enabled')}"
-                     inline="true">
         <div class="vmp-server-row">
         <f:entry title="vManager Server URL"
-                 field="serverUrl"
-                 description="Base URL of the vManager REST API (e.g. https://host:port/vmgr/vapi).">
-            <f:textbox clazz="vmp-server-url"/>
+                 field="serverUrl">
+            <f:textbox/>
         </f:entry>
         <f:entry title="Credentials"
-                 field="credentialsId"
-                 description="Username/password credential for authenticating to the vManager server.">
+                 field="credentialsId">
             <c:select/>
         </f:entry>
         </div>
         <f:entry title="vManager Session"
-                 field="sessionSource"
-                 description="How the vManager session name(s) executed by this build are obtained. Choose 'Leverage vManager Jenkins Plugin Information' to use the data recorded by the vManager Jenkins Plugin during the build, or 'Input file name' to read session names from a text file (one session name per line). The session-source choice is always taken from this GUI ג€” never from a JSON file.">
+                 field="sessionSource">
             <f:select/>
         </f:entry>
         <div class="vmp-session-file-cond" style="display:none;">
             <f:entry title="Session Input File"
-                     field="sessionInputFile"
-                     description="Optional. Absolute or workspace-relative path to a text file containing one session name per line. If left empty, the plugin will look in the build's workspace for a file named BUILD_NUMBER.BUILD_ID.sessions.input">
+                     field="sessionInputFile">
                 <f:textbox/>
             </f:entry>
         </div>
@@ -132,11 +123,22 @@
                       help="${descriptor.getHelpFile('configSourceFile')}"
                       checked="${instance != null and instance.configSource == 'FILE'}"
                       inline="true">
-            <f:entry title="Config JSON File"
-                     field="configFilePath"
-                     description="Optional. Absolute or workspace-relative path to a JSON config file produced manually or by the 'Export configuration to JSON' button. If left empty, the plugin will look for vmanager-charts-config.json in the build's workspace. The file fully replaces the chart configuration; only Server URL, credentials and vManager Session continue to come from this GUI.">
-                <f:textbox/>
-            </f:entry>
+            <j:choose>
+                <j:when test="${it != null and it.class.name == 'org.jenkinsci.plugins.workflow.job.WorkflowJob'}">
+                    <f:entry title="Config JSON File"
+                             field="configFilePath"
+                             help="${descriptor.getHelpFile('configFilePathPipeline')}">
+                        <f:textbox/>
+                    </f:entry>
+                </j:when>
+                <j:otherwise>
+                    <f:entry title="Config JSON File"
+                             field="configFilePath"
+                             help="${descriptor.getHelpFile('configFilePathFreestyle')}">
+                        <f:textbox/>
+                    </f:entry>
+                </j:otherwise>
+            </j:choose>
         </f:radioBlock>
         <f:entry title="Verbose build logging"
                  field="verboseLogging"
@@ -152,6 +154,5 @@
              inline error + capture-phase form submit guard. Mirrors the
              attribute-name guard in the metric config so the user gets
              instant feedback and stays on the page. -->
-    </f:optionalBlock>
     </div>
     </j:jelly>

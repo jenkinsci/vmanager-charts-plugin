@@ -53,15 +53,17 @@ automatically.
     per hierarchy).
     (Attributes that share the same hierarchy only need to have the verification scope 
     filled in for the first one.)
-- **Two configuration sources** - *GUI (wizard)* or **JSON file from
-  workspace** loaded at build time. Pick the workspace path for fully
-  data-driven, per-build chart definitions; see
+- **Two configuration sources** - *GUI (wizard)* or **JSON file** loaded
+  at build time (from the agent workspace for freestyle jobs, from the
+  build's work dir on the controller for pipeline jobs). Pick the JSON
+  path for fully data-driven, per-build chart definitions; see
   [Configuration source](#configuration-source-gui-vs-json-file).
 - **Export configuration to JSON** - one-click export of the current GUI
   configuration to a JSON file you can check into source control,
-  hand-edit and later drop into a build's workspace as the JSON config
-  source. Credentials, server URL and session source are intentionally
-  *not* exported.
+  hand-edit and later drop into a build's workspace (freestyle) or work
+  dir on the controller (pipeline) as the JSON config source.
+  Credentials, server URL and session source are intentionally *not*
+  exported.
 - **Per-metric chart type**: `line`, `bar` or `scatter`.
 - **Multiple charts per job**, each with its own title, max-builds window and
   list of metrics.
@@ -135,7 +137,7 @@ All configuration lives in the job's **Configure** page, under the
 | **vManager Server URL** | *(empty)* | **Required** when *Enable* is on. See [Verisium Manager connection](#verisium-manager-connection-when-show-custom-metrics-is-on) below. |
 | **Credentials** | *(empty)* | **Required** when *Enable* is on. Standard Jenkins username/password credentials. |
 | **vManager Session** | *Leverage vManager Jenkins Plugin Information* | See [Session source](#session-source). Always taken from the GUI - never from a JSON config file. |
-| **Configuration source** | `GUI (configure charts below)` | Radio. Choose **GUI** to define charts via the wizard below, or **JSON file from workspace** to load the entire chart configuration from a workspace JSON file at build completion. See [Configuration source](#configuration-source-gui-vs-json-file). |
+| **Configuration source** | `GUI (configure charts below)` | Radio. Choose **GUI** to define charts via the wizard below, or **JSON file** to load the entire chart configuration from a JSON file at build completion. For freestyle jobs the file is read from the agent workspace; for pipeline jobs it is read from the build's work dir on the controller (next to the build log). See [Configuration source](#configuration-source-gui-vs-json-file). |
 | **Verbose build logging** | `false` | When on, every `[vManager Charts]` diagnostic line (REST URLs, request headers, payloads, response routing OIDs, per-session listings, summary counters, etc.) is printed to the build's console. When off, only WARNING and error lines appear. Always taken from the GUI - never from a JSON config file. |
 
 The checkboxes below are shown only when **Configuration source = GUI**:
@@ -373,14 +375,42 @@ Under **Charts configuration** the job offers two radio options:
 - **GUI (configure charts below)** *(default)* - the chart selection and
   Custom Chart definitions come from the wizard on the same page (this is
   what the rest of this README describes).
-- **JSON file from workspace** - at build completion the plugin loads a
-  JSON file from the build's workspace and uses it to replace the entire
-  chart configuration for that build. The path is taken from the
-  **Config JSON File** field; when blank, the plugin looks for
-  `vmanager-charts-config.json` in the build's workspace.
+- **JSON file** - at build completion the plugin loads a JSON file and
+  uses it to replace the entire chart configuration for that build. The
+  path is taken from the **Config JSON File** field; when blank, the
+  plugin looks for `vmanager-charts-config.json`. Where the file is
+  expected to live depends on the job type — see below.
 
-Even when **JSON file from workspace** is selected, the following continue
-to come from the GUI (and **must** be filled in on the GUI):
+#### Where the JSON file is read from
+
+| Job type | Default location (Config JSON File blank) | Relative paths in Config JSON File | Absolute paths in Config JSON File |
+| --- | --- | --- | --- |
+| **Freestyle / Matrix** | `vmanager-charts-config.json` in the build's **agent workspace** | Resolved against the **agent workspace** | Used as-is on the agent |
+| **Pipeline (Workflow)** | `vmanager-charts-config.json` in the **build's work dir on the controller** (next to the build log, under `$JENKINS_HOME/jobs/<job>/builds/<n>/`) | Resolved against the **build's work dir on the controller** | Used as-is on the controller |
+
+For pipeline jobs there is no single persistent agent workspace, so the
+file must be available on the controller. Three common ways to get it
+there:
+
+1. Use the `vManagerChartHelper` pipeline step provided by this plugin
+   inside your pipeline (after your vManager regression step). It copies
+   `${BUILD_NUMBER}.${BUILD_ID}.sessions.input`,
+   `${BUILD_NUMBER}.${BUILD_ID}.session_launch.output` and
+   `vmanager-charts-config.json` from the agent workspace into the
+   build's work dir on the controller.
+2. Use a `stash` / `unstash` (or `archiveArtifacts`) pair to bring the
+   file to the controller and then write it under the build's work dir.
+3. Generate / drop the file directly on the controller via the **Config
+   JSON File** field (absolute path).
+
+After each successful FILE-mode build, the plugin also **mirrors** the
+loaded JSON next to the build log as
+`vmanager-charts-config.json` so the job-level and build-level chart
+pages can render the right sections even after the workspace is wiped or
+the agent is offline.
+
+Even when **JSON file** is selected, the following continue to come from
+the GUI (and **must** be filled in on the GUI):
 
 - **vManager Server URL**
 - **Credentials**

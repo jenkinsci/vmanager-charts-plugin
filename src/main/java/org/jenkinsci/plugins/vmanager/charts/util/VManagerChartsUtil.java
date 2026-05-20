@@ -6,16 +6,9 @@ import hudson.model.Run;
 import org.jenkinsci.plugins.vmanager.charts.VManagerChartsJobProperty;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Utility helpers for the vManager Charts plugin.
@@ -36,8 +29,6 @@ import java.util.logging.Logger;
  * collection of static helpers and is not intended to be instantiated.</p>
  */
 public final class VManagerChartsUtil {
-
-    private static final Logger LOGGER = Logger.getLogger(VManagerChartsUtil.class.getName());
 
     /** Suffix used for the conventional per-build session-input file. */
     public static final String SESSIONS_INPUT_SUFFIX = ".sessions.input";
@@ -93,87 +84,30 @@ public final class VManagerChartsUtil {
     }
 
     /**
-     * Best-effort lookup of the build's workspace.
+     * Best-effort lookup of the directory where the vManager Jenkins Plugin
+     * (or a user-supplied pipeline step) is expected to drop the
+     * {@code .sessions.input} / {@code .session_launch.output} files.
      *
-     * <p>For freestyle ({@code AbstractBuild}) jobs this is straightforward.
-     * For Pipeline ({@code WorkflowRun}) jobs there is no single workspace
-     * for the whole build, so we walk the flow graph (via reflection so we
-     * don't take a hard dependency on workflow-api at runtime) and return
-     * the workspace of the most recent {@code node { }} block. This is the
-     * directory where the vManager Jenkins Plugin would have dropped the
-     * {@code .sessions.input} / {@code .session_launch.output} files.</p>
+     * <p>For freestyle ({@code AbstractBuild}) jobs this is the build's
+     * agent workspace.</p>
+     *
+     * <p>For Pipeline jobs there is no single workspace for the whole build,
+     * and walking the flow graph to find {@code node { }} workspaces is
+     * unreliable (the node block may have ended by the time we run, agents
+     * may be offline, etc.). Instead, for pipeline runs we return the build's
+     * <strong>controller-side</strong> directory ({@link Run#getRootDir()},
+     * i.e. the directory that holds the build log) wrapped as a local
+     * {@link FilePath}. Pipeline users are expected to copy / archive the
+     * input files there explicitly (e.g. via {@code archiveArtifacts} or
+     * {@code writeFile} on the controller).</p>
      */
     public static FilePath getCurrentWorkspace(Run<?, ?> run) {
         if (run instanceof AbstractBuild) {
             return ((AbstractBuild<?, ?>) run).getWorkspace();
         }
-        return findPipelineWorkspace(run);
-    }
-
-    /**
-     * Reflection-based lookup of a Pipeline build's workspace. Returns the
-     * workspace of the most recently visited {@code node { }} block (BFS from
-     * the flow heads towards parents), or {@code null} if no such workspace
-     * is recorded on the flow graph.
-     */
-    private static FilePath findPipelineWorkspace(Run<?, ?> run) {
-        try {
-            Method getExecution = run.getClass().getMethod("getExecution");
-            Object exec = getExecution.invoke(run);
-            if (exec == null) return null;
-
-            Object headsObj = exec.getClass().getMethod("getCurrentHeads").invoke(exec);
-            if (!(headsObj instanceof List)) return null;
-
-            ClassLoader cl = exec.getClass().getClassLoader();
-            Class<?> wsActionClass;
-            try {
-                wsActionClass = Class.forName(
-                        "org.jenkinsci.plugins.workflow.actions.WorkspaceAction", false, cl);
-            } catch (ClassNotFoundException cnf) {
-                return null;
-            }
-
-            Deque<Object> queue = new ArrayDeque<>();
-            for (Object h : (List<?>) headsObj) {
-                if (h != null) queue.add(h);
-            }
-            Set<String> seen = new HashSet<>();
-            while (!queue.isEmpty()) {
-                Object node = queue.poll();
-                String id;
-                try {
-                    id = (String) node.getClass().getMethod("getId").invoke(node);
-                } catch (Throwable t) {
-                    id = String.valueOf(System.identityHashCode(node));
-                }
-                if (!seen.add(id)) continue;
-
-                Object action = node.getClass()
-                        .getMethod("getAction", Class.class)
-                        .invoke(node, wsActionClass);
-                if (action != null) {
-                    Object ws = action.getClass().getMethod("getWorkspace").invoke(action);
-                    if (ws instanceof FilePath) {
-                        return (FilePath) ws;
-                    }
-                    if (ws instanceof String) {
-                        // Older WorkspaceAction returns the remote path as String.
-                        return new FilePath(new java.io.File((String) ws));
-                    }
-                }
-
-                Object parents = node.getClass().getMethod("getParents").invoke(node);
-                if (parents instanceof List) {
-                    for (Object p : (List<?>) parents) {
-                        if (p != null) queue.add(p);
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            LOGGER.log(Level.FINE, "Pipeline workspace lookup failed", t);
-        }
-        return null;
+        // Pipeline (and any other non-AbstractBuild) — use the controller-side
+        // build directory next to the log file.
+        return new FilePath(run.getRootDir());
     }
 
     /**

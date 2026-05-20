@@ -11,50 +11,42 @@
     <st:adjunct includes="org.jenkinsci.plugins.vmanager.charts.model.MetricDefinition.assets"/>
     <div class="vmp-metric-row">
         <f:entry title="Entity Level"
-                 field="entityType"
-                 description="The vManager entity level to query for this attribute.">
+                 field="entityType">
             <f:select/>
         </f:entry>
         <f:entry title="Attribute *"
-                 field="attributeName"
-                 description="Required. Pick an attribute fetched from the vManager server. Type any part of the name to filter.">
+                 field="attributeName">
             <f:combobox fillDependsOn="entityType ../../serverUrl ../../credentialsId"
                         checkDependsOn="entityType ../../serverUrl ../../credentialsId"/>
         </f:entry>
         <f:entry title="Chart Type"
-                 field="chartType"
-                 description="How this series should be rendered in the chart.">
+                 field="chartType">
             <f:select/>
         </f:entry>
         <f:entry title="Nickname"
-                 field="nickname"
-                 description="Optional. Custom label shown on the chart legend instead of the attribute name. Must be unique within this chart so duplicates of the same attribute can be told apart.">
+                 field="nickname">
             <f:textbox clazz="vmp-nickname"/>
         </f:entry>
     </div>
     <!-- Shown only for VPLAN_LEVEL -->
     <div class="vmp-entity-cond" data-vmp-entity="VPLAN_LEVEL">
         <f:entry title="Hierarchy Path"
-                 field="hierarchyPath"
-                 description="Optional. Path to the element within the vPlan (e.g. top/sub/leaf).">
+                 field="hierarchyPath">
             <f:textbox/>
         </f:entry>
         <f:entry title="vPlan Refinement Files"
-                 field="vplanRefinementFiles"
-                 description="Optional. Full filesystem paths to vManager vPlan refinement files. Click 'Add' to enter more than one.">
+                 field="vplanRefinementFiles">
             <f:repeatableProperty field="vplanRefinementFiles" add="Add vPlan Refinement File"/>
         </f:entry>
     </div>
     <!-- Shown only for COVERAGE_LEVEL -->
     <div class="vmp-entity-cond" data-vmp-entity="COVERAGE_LEVEL">
         <f:entry title="Verification Scope"
-                 field="verificationScope"
-                 description="Optional. Verification Scope filter for the metrics query.">
+                 field="verificationScope">
             <f:textbox/>
         </f:entry>
         <f:entry title="Hierarchy"
-                 field="coverageHierarchy"
-                 description="Optional. Path to the element within the coverage model (e.g. top/sub/leaf).">
+                 field="coverageHierarchy">
             <f:textbox/>
         </f:entry>
     </div>
@@ -67,8 +59,7 @@
     -->
     <div class="vmp-entity-cond" data-vmp-entity="VPLAN_LEVEL,COVERAGE_LEVEL">
         <f:entry title="Refinement Files"
-                 field="refinementFiles"
-                 description="Optional. Full filesystem paths to vManager refinement files. Click 'Add' to enter more than one.">
+                 field="refinementFiles">
             <f:repeatableProperty field="refinementFiles" add="Add Refinement File"/>
         </f:entry>
     </div>

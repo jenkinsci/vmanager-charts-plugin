@@ -8,13 +8,12 @@ import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.Job;
-import hudson.model.JobProperty;
-import hudson.model.JobPropertyDescriptor;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.vmanager.charts.model.ChartDefinition;
 import jenkins.model.Jenkins;
+import jenkins.model.OptionalJobProperty;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -22,6 +21,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.interceptor.RequirePOST;
+import org.kohsuke.stapler.verb.POST;
 import org.jenkinsci.plugins.vmanager.charts.util.JsonConfigLoader;
 import net.sf.json.JSONObject;
 
@@ -34,7 +34,7 @@ import java.util.List;
  * Job property that enables vManager Charts for a job and configures
  * which charts are displayed. Rendered in the job's General configuration section.
  */
-public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
+public class VManagerChartsJobProperty extends OptionalJobProperty<Job<?, ?>> {
 
     private boolean enabled = true;
     private boolean showBuildDuration = false;
@@ -254,7 +254,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
     }
 
     @Extension
-    public static class DescriptorImpl extends JobPropertyDescriptor {
+    public static class DescriptorImpl extends OptionalJobProperty.OptionalJobPropertyDescriptor {
 
         @NonNull
         @Override
@@ -267,6 +267,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
             return true;
         }
 
+        @POST
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item,
                                                      @QueryParameter String credentialsId,
                                                      @QueryParameter String serverUrl) {
@@ -292,6 +293,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
                     .includeCurrentValue(credentialsId);
         }
 
+        @POST
         public FormValidation doCheckServerUrl(@QueryParameter String value) {
             if (value == null || value.isBlank()) {
                 return FormValidation.error("vManager Server URL is required.");
@@ -302,6 +304,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
             return FormValidation.ok();
         }
 
+        @POST
         public FormValidation doCheckCredentialsId(@AncestorInPath Item item,
                                                     @QueryParameter String value) {
             if (value == null || value.isBlank()) {
@@ -310,6 +313,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
             return FormValidation.ok();
         }
 
+        @POST
         public ListBoxModel doFillSessionSourceItems() {
             ListBoxModel m = new ListBoxModel();
             m.add("Leverage vManager Jenkins Plugin Information", "PLUGIN");
@@ -317,6 +321,7 @@ public class VManagerChartsJobProperty extends JobProperty<Job<?, ?>> {
             return m;
         }
 
+        @POST
         public FormValidation doCheckMaxBuilds(@QueryParameter String value) {            if (value == null || value.isBlank()) {
                 return FormValidation.error("Maximum builds is required (use 0 for unlimited).");
             }

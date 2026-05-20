@@ -367,6 +367,20 @@ public class CustomMetricsRunListener extends RunListener<Run<?, ?>> {
             BuildLog.trace(listener,
                     "[vManager Charts] Configuration source: JSON file from workspace ("
                             + cfg.getRemote() + "). Credentials still taken from GUI.");
+            // Persist a controller-side copy next to the build log so the
+            // view layer (VManagerChartsAction, BuildChartAction) can
+            // resolve the effective config even when the workspace is gone
+            // or on a remote agent. Always written under the canonical
+            // default name so the view only has to look in one place.
+            try {
+                java.io.File outFile = new java.io.File(run.getRootDir(),
+                        JsonConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+                java.nio.file.Files.write(outFile.toPath(),
+                        json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                LOGGER.log(Level.FINE,
+                        "Failed to persist effective JSON config next to build log", e);
+            }
             return JsonConfigLoader.load(json);
         } catch (IOException | InterruptedException | RuntimeException e) {
             LOGGER.log(Level.WARNING, "Failed to load JSON config from workspace", e);

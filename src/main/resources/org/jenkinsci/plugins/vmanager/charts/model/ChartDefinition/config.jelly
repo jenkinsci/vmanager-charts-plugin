@@ -7,24 +7,20 @@
     -->
     <div class="vmp-chart-row">
         <f:entry title="Chart Title *"
-                 field="title"
-                 description="Heading shown above the chart on the vManager Charts page. Required.">
+                 field="title">
             <f:textbox/>
         </f:entry>
         <f:entry title="vPlan Type"
-                 field="vPlanType"
-                 description="Optional. Leave as None if you don't plan to use vPlan in this chart, or filter by a specific vPlan.">
+                 field="vPlanType">
             <f:select/>
         </f:entry>
         <f:entry title="vPlan"
-                 field="vPlanPath"
-                 description="DB: select a vPlan name fetched from the server. File: type the full path to the vPlan file.">
+                 field="vPlanPath">
             <f:combobox fillDependsOn="vPlanType ../serverUrl ../credentialsId"
                         checkDependsOn="vPlanType ../serverUrl ../credentialsId"/>
         </f:entry>
         <f:entry title="Max Builds *"
-                 field="maxBuilds"
-                 description="Number of most-recent builds to scan for this chart. Required. Enter 0 for no limit (scan ALL builds in the job's history).">
+                 field="maxBuilds">
             <f:textbox default="50"/>
         </f:entry>
     </div>

@@ -1,5 +1,7 @@
 package org.jenkinsci.plugins.vmanager.charts.util;
 
+import hudson.model.Job;
+import hudson.model.Run;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
@@ -8,8 +10,13 @@ import org.jenkinsci.plugins.vmanager.charts.model.ChartDefinition;
 import org.jenkinsci.plugins.vmanager.charts.model.MetricDefinition;
 import org.jenkinsci.plugins.vmanager.charts.model.RefinementFile;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Builds a {@link VManagerChartsJobProperty} from a JSON configuration
@@ -19,6 +26,16 @@ import java.util.List;
  * they always come from the GUI.
  */
 public final class JsonConfigLoader {
+
+    private static final Logger LOGGER = Logger.getLogger(JsonConfigLoader.class.getName());
+
+    /**
+     * Canonical filename used when the build listener mirrors the JSON
+     * config into the run dir on the controller. The view layer always
+     * looks here first regardless of the user's configured path on the
+     * agent side.
+     */
+    public static final String DEFAULT_CONFIG_FILE_NAME = "vmanager-charts-config.json";
 
     private JsonConfigLoader() {
         // static utility
@@ -133,6 +150,91 @@ public final class JsonConfigLoader {
         p.setCustomCharts(parseCharts(root.opt("customCharts")));
 
         return p;
+    }
+
+    /**
+     * Returns the effective property to use for view/data purposes given a
+     * {@link Run}. When the GUI property has {@code configSource = FILE},
+     * the JSON mirrored next to the build log is parsed and used to overlay
+     * the GUI booleans / customCharts. The GUI-only fields (server URL,
+     * credentials, session source/file, verbose-logging) are always taken
+     * from the saved GUI property. When the mirrored file cannot be located
+     * or parsed, the GUI property is returned unchanged.
+     */
+    public static VManagerChartsJobProperty effectiveForRun(Run<?, ?> run,
+                                                            VManagerChartsJobProperty gui) {
+        if (gui == null || run == null) {
+            return gui;
+        }
+        if (!"FILE".equalsIgnoreCase(gui.getConfigSource())) {
+            return gui;
+        }
+        File file = locateConfigFile(run, gui.getConfigFilePath());
+        if (file == null || !file.isFile()) {
+            return gui;
+        }
+        try {
+            String json = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            VManagerChartsJobProperty loaded = load(json);
+            loaded.setServerUrl(gui.getServerUrl());
+            loaded.setCredentialsId(gui.getCredentialsId());
+            loaded.setSessionSource(gui.getSessionSource());
+            loaded.setSessionInputFile(gui.getSessionInputFile());
+            loaded.setVerboseLogging(gui.isVerboseLogging());
+            return loaded;
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE,
+                    "Failed to load effective JSON config from " + file, e);
+            return gui;
+        }
+    }
+
+    /**
+     * Returns the effective property for job-level views (the job-sidebar
+     * "vManager Charts" page). When {@code configSource = FILE}, the JSON
+     * file from the latest completed build (falling back to the latest
+     * build) is used.
+     */
+    public static VManagerChartsJobProperty effectiveForJob(Job<?, ?> job,
+                                                            VManagerChartsJobProperty gui) {
+        if (gui == null || job == null) {
+            return gui;
+        }
+        if (!"FILE".equalsIgnoreCase(gui.getConfigSource())) {
+            return gui;
+        }
+        Run<?, ?> ref = job.getLastCompletedBuild();
+        if (ref == null) {
+            ref = job.getLastBuild();
+        }
+        if (ref == null) {
+            return gui;
+        }
+        return effectiveForRun(ref, gui);
+    }
+
+    /**
+     * Resolves the controller-side {@link File} that should be read for the
+     * JSON config of a given run. The build-completion listener mirrors the
+     * loaded JSON into {@code run.getRootDir()} under
+     * {@link #DEFAULT_CONFIG_FILE_NAME}, which is preferred. Falls back to
+     * the user-configured path (absolute, or relative to the run dir) for
+     * legacy builds where the mirror is not yet present.
+     */
+    public static File locateConfigFile(Run<?, ?> run, String userPath) {
+        File rootDir = run.getRootDir();
+        File mirrored = new File(rootDir, DEFAULT_CONFIG_FILE_NAME);
+        if (mirrored.isFile()) {
+            return mirrored;
+        }
+        if (userPath != null && !userPath.isBlank()) {
+            File user = new File(userPath.trim());
+            if (user.isAbsolute()) {
+                return user;
+            }
+            return new File(rootDir, userPath.trim());
+        }
+        return mirrored;
     }
 
     private static List<ChartDefinition> parseCharts(Object raw) {
