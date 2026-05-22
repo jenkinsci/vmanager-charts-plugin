@@ -65,6 +65,7 @@
                     var chartDom = document.getElementById('customMetricChart_' + index);
                     if (!chartDom) return;
                     var myChart = echarts.init(chartDom);
+                    registerWithDashboard(chartDom, myChart);
                     enablePinnableTooltip(myChart);
                     renderMixedChart(myChart, data);
                 });
@@ -72,6 +73,13 @@
                 console.error('[vManager Charts] custom metrics error:', e);
             }
         });
+    }
+
+    function registerWithDashboard(chartDom, chartInstance) {
+        if (!window.VmgrDashboard) return;
+        var section = chartDom.closest('.chart-section[data-chart-id]');
+        if (!section) return;
+        window.VmgrDashboard.register(section.dataset.chartId, [chartInstance]);
     }
 
     /**
@@ -140,7 +148,21 @@
                 { type: 'inside', xAxisIndex: 0, start: 0, end: 100, zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false, preventDefaultMouseMove: false }
             ],
             series: series,
-            toolbox: { feature: { saveAsImage: { title: 'Save' } } }
+            toolbox: {
+                showTitle: false,
+                tooltip: {
+                    show: true,
+                    position: 'top',
+                    backgroundColor: 'rgba(50,50,50,0.9)',
+                    textStyle: { color: '#fff', fontSize: 12 }
+                },
+                feature: {
+                    dataZoom:    { title: { zoom: 'Zoom', back: 'Reset Zoom' }, yAxisIndex: 'none' },
+                    dataView:    { title: 'Data View', lang: ['Data View', 'Close', 'Refresh'], readOnly: true },
+                    restore:     { title: 'Restore' },
+                    saveAsImage: { title: 'Save' }
+                }
+            }
         };
 
         chart.setOption(option);
@@ -152,6 +174,7 @@
         if (!chartDom) return;
 
         var myChart = echarts.init(chartDom);
+        registerWithDashboard(chartDom, myChart);
         enablePinnableTooltip(myChart);
         myChart.showLoading();
 
@@ -171,6 +194,7 @@
         if (!chartDom) return;
 
         var myChart = echarts.init(chartDom);
+        registerWithDashboard(chartDom, myChart);
         enablePinnableTooltip(myChart);
         myChart.showLoading();
 
@@ -190,6 +214,7 @@
         if (!chartDom) return;
 
         var myChart = echarts.init(chartDom);
+        registerWithDashboard(chartDom, myChart);
         myChart.showLoading();
 
         vManagerChartsProxy.getTestResultsData(function(response) {
@@ -274,7 +299,17 @@
             ],
             series: series,
             toolbox: {
+                showTitle: false,
+                tooltip: {
+                    show: true,
+                    position: 'top',
+                    backgroundColor: 'rgba(50,50,50,0.9)',
+                    textStyle: { color: '#fff', fontSize: 12 }
+                },
                 feature: {
+                    dataZoom:    { title: { zoom: 'Zoom', back: 'Reset Zoom' }, yAxisIndex: 'none' },
+                    dataView:    { title: 'Data View', lang: ['Data View', 'Close', 'Refresh'], readOnly: true },
+                    restore:     { title: 'Restore' },
                     saveAsImage: { title: 'Save' }
                 }
             }
@@ -352,7 +387,17 @@
             ],
             series: series,
             toolbox: {
+                showTitle: false,
+                tooltip: {
+                    show: true,
+                    position: 'top',
+                    backgroundColor: 'rgba(50,50,50,0.9)',
+                    textStyle: { color: '#fff', fontSize: 12 }
+                },
                 feature: {
+                    dataZoom:    { title: { zoom: 'Zoom', back: 'Reset Zoom' }, yAxisIndex: 'none' },
+                    dataView:    { title: 'Data View', lang: ['Data View', 'Close', 'Refresh'], readOnly: true },
+                    restore:     { title: 'Restore' },
                     saveAsImage: { title: 'Save' }
                 }
             }

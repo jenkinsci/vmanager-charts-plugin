@@ -1,11 +1,20 @@
 package org.jenkinsci.plugins.vmanager.charts;
 
 import hudson.model.Action;
+import hudson.model.Item;
 import hudson.model.Run;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 import org.jenkinsci.plugins.vmanager.charts.util.JsonConfigLoader;
+import org.jenkinsci.plugins.vmanager.charts.util.VManagerChartsLayoutStore;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.bind.JavaScriptMethod;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -164,5 +173,55 @@ public class BuildChartAction implements Action {
                 new ArrayList<>(stored.getMediumEnd()),
                 new ArrayList<>(stored.getLargeEnd()),
                 null);
+    }
+
+    // ── Dashboard layout (order + per-card width) ─────────────────────────
+
+    /** Current persisted build-page layout, opaque JSON; {@code "{}"} if none. */
+    public String getLayoutJson() {
+        if (run == null) return "{}";
+        return VManagerChartsLayoutStore.loadBuildLayout(run.getParent());
+    }
+
+    /** Whether the current user may persist a new layout for this page. */
+    public boolean isCanConfigure() {
+        return run != null && run.getParent().hasPermission(Item.CONFIGURE);
+    }
+
+    @RequirePOST
+    public void doSaveLayout(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
+        if (run == null) {
+            rsp.sendError(404, "no build context");
+            return;
+        }
+        run.getParent().checkPermission(Item.CONFIGURE);
+        String body = readBody(req, VManagerChartsLayoutStore.MAX_LAYOUT_BYTES);
+        try {
+            Object parsed = JSONSerializer.toJSON(body == null ? "{}" : body);
+            if (!(parsed instanceof JSONObject)) {
+                rsp.sendError(400, "layout must be a JSON object");
+                return;
+            }
+        } catch (RuntimeException e) {
+            rsp.sendError(400, "invalid JSON: " + e.getMessage());
+            return;
+        }
+        VManagerChartsLayoutStore.saveBuildLayout(run.getParent(), body);
+        rsp.setStatus(204);
+    }
+
+    private static String readBody(StaplerRequest2 req, int maxBytes) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader r = req.getReader()) {
+            char[] buf = new char[4096];
+            int n;
+            while ((n = r.read(buf)) != -1) {
+                if (sb.length() + n > maxBytes) {
+                    throw new IOException("layout payload exceeds " + maxBytes + " bytes");
+                }
+                sb.append(buf, 0, n);
+            }
+        }
+        return sb.toString();
     }
 }

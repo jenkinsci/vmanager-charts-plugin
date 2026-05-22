@@ -77,7 +77,21 @@
                 { name: 'Medium Duration (middle 33%)', type: 'scatter', data: medium, symbolSize: 8, itemStyle: { color: '#fa8c16' } },
                 { name: 'Large Duration (top 33%)',     type: 'scatter', data: large,  symbolSize: 8, itemStyle: { color: '#f5222d' } }
             ],
-            toolbox: { feature: { saveAsImage: { title: 'Save' } } }
+            toolbox: {
+                showTitle: false,
+                tooltip: {
+                    show: true,
+                    position: 'top',
+                    backgroundColor: 'rgba(50,50,50,0.9)',
+                    textStyle: { color: '#fff', fontSize: 12 }
+                },
+                feature: {
+                    dataZoom:    { title: { zoom: 'Zoom', back: 'Reset Zoom' } },
+                    dataView:    { title: 'Data View', lang: ['Data View', 'Close', 'Refresh'], readOnly: true },
+                    restore:     { title: 'Restore' },
+                    saveAsImage: { title: 'Save' }
+                }
+            }
         };
     }
 

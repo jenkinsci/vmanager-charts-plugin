@@ -9,10 +9,17 @@
 
             <st:bind var="vManagerChartsProxy" value="${it}"/>
 
-            <div class="vmanager-charts-container" data-root-url="${rootURL}">
+            <link rel="stylesheet" type="text/css" href="${rootURL}/plugin/vmanager-charts/dashboard.css"/>
+
+            <div class="vmanager-charts-container vmgr-dashboard"
+                 data-root-url="${rootURL}"
+                 data-vmgr-dashboard="true"
+                 data-save-url="${rootURL}/${it.job.url}vmanager-charts/saveLayout"
+                 data-can-configure="${it.canConfigure}"
+                 data-layout="${it.layoutJson}">
                 <!-- Build Duration Chart -->
                 <j:if test="${it.showBuildDuration}">
-                    <div class="chart-section">
+                    <div class="chart-section" data-chart-id="build-duration">
                         <h2>Build Duration Over Time</h2>
                         <div id="durationChart" style="width: 100%; height: 400px;"></div>
                     </div>
@@ -20,7 +27,7 @@
 
                 <!-- Success Rate Chart -->
                 <j:if test="${it.showSuccessRate}">
-                    <div class="chart-section">
+                    <div class="chart-section" data-chart-id="success-rate">
                         <h2>Build Success/Failure Rate</h2>
                         <div id="successRateChart" style="width: 100%; height: 400px;"></div>
                     </div>
@@ -28,7 +35,7 @@
 
                 <!-- Test Results Chart -->
                 <j:if test="${it.showTestResults}">
-                    <div class="chart-section">
+                    <div class="chart-section" data-chart-id="test-results">
                         <h2>Regression Anomaly Detection Summary</h2>
                         <div id="testResultsChart" style="width: 100%; height: 400px;"></div>
                     </div>
@@ -36,15 +43,16 @@
 
                 <!-- Custom Charts -->
                 <j:if test="${it.showCustomMetrics}">
-                    <j:forEach var="chartTitle" items="${it.customChartTitles}" varStatus="loop">
-                        <div class="chart-section">
-                            <h2>${chartTitle}</h2>
-                            <div id="customMetricChart_${loop.index}" style="width: 100%; height: 400px;"></div>
+                    <j:forEach var="card" items="${it.customChartCards}">
+                        <div class="chart-section" data-chart-id="${card.chartId}">
+                            <h2>${card.title}</h2>
+                            <div id="customMetricChart_${card.index}" style="width: 100%; height: 400px;"></div>
                         </div>
                     </j:forEach>
                 </j:if>
             </div>
 
+            <script src="${rootURL}/plugin/vmanager-charts/dashboard.js"></script>
             <st:adjunct includes="org.jenkinsci.plugins.vmanager.charts.VManagerChartsAction.assets"/>
         </l:main-panel>
     </l:layout>

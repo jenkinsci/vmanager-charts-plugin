@@ -1,0 +1,142 @@
+/* vManager Charts mini-dashboard layout */
+[data-vmgr-dashboard] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+}
+
+/* ── Card "rubric": framed panel around each chart ────────────────────────── */
+[data-vmgr-dashboard] > .chart-section {
+    margin: 0;
+    box-sizing: border-box;
+    flex: 0 0 100%;
+    max-width: 100%;
+    min-width: 0;
+    position: relative;
+
+    background: var(--card-background, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.06),
+        0 6px 16px rgba(0, 0, 0, 0.10),
+        0 12px 28px rgba(0, 0, 0, 0.08);
+    padding: 16px 18px 14px 18px;
+    transition: box-shadow 160ms ease;
+}
+[data-vmgr-dashboard] > .chart-section:hover {
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.08),
+        0 10px 22px rgba(0, 0, 0, 0.14),
+        0 18px 38px rgba(0, 0, 0, 0.12);
+}
+[data-vmgr-dashboard] > .chart-section > h2 {
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    line-height: 1.3;
+}
+
+[data-vmgr-dashboard] > .chart-section[data-vmgr-computed-width="50"] {
+    flex-basis: calc(50% - 9px);
+    max-width: calc(50% - 9px);
+}
+
+[data-vmgr-dashboard] > .chart-section[data-vmgr-computed-width="100"] {
+    flex-basis: 100%;
+    max-width: 100%;
+}
+
+/* ── Bottom toolbar (arrows / width / magnifier) ──────────────────────────── */
+.vmgr-card-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.vmgr-tb-group {
+    display: inline-flex;
+    gap: 6px;
+}
+.vmgr-tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    color: inherit;
+    font-size: 12px;
+    line-height: 1;
+}
+.vmgr-tb-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+}
+.vmgr-tb-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.vmgr-width-label { font-weight: 600; }
+
+/* ── Magnifier modal (card stays in place, floats above backdrop) ─────────── */
+.vmgr-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 10000;
+}
+.vmgr-modal-close {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: #555;
+    z-index: 1;
+}
+.vmgr-modal-close:hover { color: #000; }
+
+body.vmgr-modal-open { overflow: hidden; }
+
+/* When a card is magnified it stays in its dashboard slot in the DOM but
+   becomes a position:fixed overlay so its echarts instance never gets
+   detached / reattached. Important so the sibling chart below doesn't
+   disappear on close. */
+[data-vmgr-dashboard] > .chart-section.vmgr-in-modal {
+    position: fixed !important;
+    top: 4vh !important;
+    left: 4vw !important;
+    right: 4vw !important;
+    bottom: 4vh !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: none !important;
+    margin: 0 !important;
+    z-index: 10001;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 18px 56px rgba(0, 0, 0, 0.45);
+    padding: 24px 24px 18px 24px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+.chart-section.vmgr-in-modal > h2 { flex: 0 0 auto; }
+.chart-section.vmgr-in-modal > div[id] {
+    flex: 1 1 auto;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 60vh !important;
+}
+.chart-section.vmgr-in-modal > .vmgr-card-toolbar { flex: 0 0 auto; }
