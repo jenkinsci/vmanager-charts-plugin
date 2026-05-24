@@ -140,3 +140,20 @@ body.vmgr-modal-open { overflow: hidden; }
     min-height: 60vh !important;
 }
 .chart-section.vmgr-in-modal > .vmgr-card-toolbar { flex: 0 0 auto; }
+
+/* Failure-triage card wraps its echarts div in a scroller. When magnified,
+   make that wrapper fill the available modal height and let the inner chart
+   stretch to use it (the chart's own JS sizes it taller when it has many
+   y-axis rows, in which case this wrapper scrolls). */
+.chart-section.vmgr-in-modal > .failure-triage-scroll {
+    flex: 1 1 auto;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.chart-section.vmgr-in-modal > .failure-triage-scroll > div[id] {
+    width: 100% !important;
+    min-height: 70vh !important;
+}

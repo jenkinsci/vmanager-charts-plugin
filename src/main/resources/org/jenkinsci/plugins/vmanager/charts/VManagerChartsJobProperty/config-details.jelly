@@ -94,6 +94,16 @@
                     <f:checkbox name="showTestResults" checked="${instance != null and instance.showTestResults}"/>
                 </f:entry>
             </j:if>
+            <f:optionalBlock name="showGroupedRunsCharts"
+                             title="Custom Grouped Run's Chart (Heatmap)"
+                             help="${descriptor.getHelpFile('showGroupedRunsCharts')}"
+                             checked="${instance != null and instance.showGroupedRunsCharts}"
+                             inline="true">
+                <f:entry title="Charts"
+                         description="One heat-map will be drawn per entry. Each chart groups the build's runs by a vManager RUN_LEVEL attribute and counts the entities per group.">
+                    <f:repeatableProperty field="groupedRunsCharts" add="Add Chart"/>
+                </f:entry>
+            </f:optionalBlock>
             <f:optionalBlock name="showCustomMetrics"
                              title="Custom Charts"
                              checked="${instance != null and instance.showCustomMetrics}"

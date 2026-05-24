@@ -279,6 +279,40 @@ public class CustomMetricsRunListener extends RunListener<Run<?, ?>> {
             }
         }
 
+        // ── Per-build Failure Triage data (heat-map at the job level) ───────
+        if (property.isShowGroupedRunsCharts() && !sessions.isEmpty()) {
+            for (org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition gc
+                    : property.getGroupedRunsCharts()) {
+                String attrId = gc.getGroupByAttributeId();
+                if (attrId == null || attrId.isBlank()) {
+                    listener.getLogger().println(
+                            "[vManager Charts] WARNING: grouped-runs chart '"
+                                    + gc.getTitle() + "' has no Group-by attribute; skipping.");
+                    continue;
+                }
+                try {
+                    java.util.LinkedHashMap<String, Integer> counts =
+                            VManagerRunsClient.fetchGroupByCounts(
+                                    serverUrl, sessions, creds, listener,
+                                    attrId, gc.getYAxisLimit(),
+                                    gc.getStatusFilterList());
+                    run.addAction(new FailureTriageBuildAction(
+                            gc.getTitle(), attrId, counts));
+                    savedAction = true;
+                    BuildLog.trace(listener, String.format(
+                            "[vManager Charts] grouped-runs '%s' (group_by=%s): %d distinct value(s)",
+                            gc.getTitle(), attrId, counts.size()));
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING,
+                            "Failed to fetch grouped-runs data for chart '"
+                                    + gc.getTitle() + "'", e);
+                    listener.getLogger().println(
+                            "[vManager Charts] WARNING: could not fetch grouped-runs data for chart '"
+                                    + gc.getTitle() + "': " + e.getMessage());
+                }
+            }
+        }
+
         // ── Custom-metric collection (delegated to CustomMetricsCollector) ────
         List<ChartDefinition> charts = property.isShowCustomMetrics()
                 ? property.getCustomCharts() : java.util.Collections.<ChartDefinition>emptyList();

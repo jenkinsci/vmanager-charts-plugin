@@ -75,6 +75,58 @@ public class VManagerChartsAction implements Action {
         return getProperty() == null || getProperty().isShowTestResults();
     }
 
+    public boolean isShowFailureTriageChart() {
+        VManagerChartsJobProperty p = getProperty();
+        return p != null && p.isEnabled()
+                && p.isShowGroupedRunsCharts()
+                && !p.getGroupedRunsCharts().isEmpty();
+    }
+
+    /**
+     * Cards for index.jelly rendering of grouped-runs heat-maps.
+     */
+    public List<GroupedRunsCard> getGroupedRunsCards() {
+        VManagerChartsJobProperty p = getProperty();
+        if (p == null || !p.isShowGroupedRunsCharts()) {
+            return Collections.emptyList();
+        }
+        List<GroupedRunsCard> out = new ArrayList<>();
+        int idx = 0;
+        java.util.Set<String> used = new java.util.HashSet<>();
+        for (org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition gc
+                : p.getGroupedRunsCharts()) {
+            String base = slug(gc.getTitle());
+            if (base.isEmpty()) base = "grouped-runs-" + idx;
+            String s = base;
+            int n = 2;
+            while (!used.add(s)) {
+                s = base + "-" + n++;
+            }
+            out.add(new GroupedRunsCard(
+                    gc.getTitle(), gc.getSubtitle(), idx, "grouped-" + s));
+            idx++;
+        }
+        return out;
+    }
+
+    /** Lightweight row used by index.jelly to render a grouped-runs card. */
+    public static final class GroupedRunsCard {
+        private final String title;
+        private final String subtitle;
+        private final int    index;
+        private final String chartId;
+        GroupedRunsCard(String title, String subtitle, int index, String chartId) {
+            this.title    = title;
+            this.subtitle = subtitle;
+            this.index    = index;
+            this.chartId  = chartId;
+        }
+        public String getTitle()    { return title; }
+        public String getSubtitle() { return subtitle; }
+        public int    getIndex()    { return index; }
+        public String getChartId()  { return chartId; }
+    }
+
     private VManagerChartsJobProperty getProperty() {
         VManagerChartsJobProperty gui =
                 (VManagerChartsJobProperty) job.getProperty(VManagerChartsJobProperty.class);
@@ -239,6 +291,155 @@ public class VManagerChartsAction implements Action {
     @JavaScriptMethod
     public ChartData getTestResultsData() {
         return new TestResultsCollector(job, getMaxBuilds()).collectTestResults();
+    }
+
+    /**
+     * Returns one heat-map dataset per configured
+     * {@link org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition}
+     * (in declaration order, matching {@link #getGroupedRunsCards()}). Each
+     * entry has the same shape as the legacy single-chart payload:
+     * {@code labels, yLabels, yTitles, cells, maxValue} plus a
+     * {@code title} / {@code subtitle} for chart rendering.
+     */
+    @JavaScriptMethod
+    public net.sf.json.JSONArray getGroupedRunsChartsData() {
+        net.sf.json.JSONArray out = new net.sf.json.JSONArray();
+        VManagerChartsJobProperty p = getProperty();
+        if (p == null || !p.isShowGroupedRunsCharts()) return out;
+
+        List<org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition> defs =
+                p.getGroupedRunsCharts();
+        for (org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition gc : defs) {
+            out.add(buildGroupedRunsPayload(gc));
+        }
+        return out;
+    }
+
+    /** Builds one heat-map payload for the given chart definition. */
+    private JSONObject buildGroupedRunsPayload(
+            org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition gc) {
+
+        JSONObject result = new JSONObject();
+        result.put("title",    gc.getTitle()    == null ? "" : gc.getTitle());
+        result.put("subtitle", gc.getSubtitle() == null ? "" : gc.getSubtitle());
+
+        net.sf.json.JSONArray empty = new net.sf.json.JSONArray();
+        result.put("labels",   empty);
+        result.put("yLabels",  empty);
+        result.put("yTitles",  empty);
+        result.put("cells",    empty);
+        result.put("maxValue", 0);
+
+        int max     = gc.getMaxBuilds();
+        int yLimit  = gc.getYAxisLimit();
+        String wantedTitle = gc.getTitle() == null ? "" : gc.getTitle();
+
+        // ── Collect per-build counts (newest first) for THIS chart only ──
+        List<String> buildLabels = new ArrayList<>();
+        List<Map<String, Integer>> perBuild = new ArrayList<>();
+        int matched = 0;
+        boolean allowLegacyFallback = isFirstChart(gc);
+        for (Run<?, ?> build : job.getBuilds()) {
+            if (max > 0 && matched >= max) break;
+            FailureTriageBuildAction action = pickAction(build, wantedTitle, allowLegacyFallback);
+            if (action == null) continue;
+            buildLabels.add("#" + build.getNumber());
+            perBuild.add(action.getCounts());
+            matched++;
+        }
+        if (buildLabels.isEmpty()) return result;
+
+        final int TRUNCATE_LEN = 50;
+        Map<String, int[]> agg = new LinkedHashMap<>();
+        for (int i = 0; i < perBuild.size(); i++) {
+            for (Map.Entry<String, Integer> e : perBuild.get(i).entrySet()) {
+                String desc = e.getKey() == null ? "" : e.getKey();
+                int    c    = e.getValue() == null ? 0 : e.getValue();
+                if (!agg.containsKey(desc)) {
+                    agg.put(desc, new int[]{ i, c });
+                }
+            }
+        }
+
+        List<Map.Entry<String, int[]>> rows = new ArrayList<>(agg.entrySet());
+        rows.sort((a, b) -> {
+            int byLast = Integer.compare(a.getValue()[0], b.getValue()[0]);
+            if (byLast != 0) return byLast;
+            return Integer.compare(b.getValue()[1], a.getValue()[1]);
+        });
+        if (yLimit > 0 && rows.size() > yLimit) rows = rows.subList(0, yLimit);
+        java.util.Collections.reverse(rows);
+
+        net.sf.json.JSONArray yLabels = new net.sf.json.JSONArray();
+        net.sf.json.JSONArray yTitles = new net.sf.json.JSONArray();
+        java.util.Map<String, Integer> descToY = new java.util.HashMap<>();
+        for (int yi = 0; yi < rows.size(); yi++) {
+            String full = rows.get(yi).getKey();
+            String oneLine = full.replaceAll("[\\r\\n\\t]+", " ")
+                    .replaceAll(" {2,}", " ").trim();
+            String shown = oneLine.length() > TRUNCATE_LEN
+                    ? oneLine.substring(0, TRUNCATE_LEN) + "\u2026"
+                    : oneLine;
+            yLabels.add(shown);
+            yTitles.add(full);
+            descToY.put(full, yi);
+        }
+
+        net.sf.json.JSONArray cells = new net.sf.json.JSONArray();
+        int maxValue = 0;
+        for (int xi = 0; xi < perBuild.size(); xi++) {
+            for (Map.Entry<String, Integer> e : perBuild.get(xi).entrySet()) {
+                String desc = e.getKey() == null ? "" : e.getKey();
+                Integer yi  = descToY.get(desc);
+                if (yi == null) continue;
+                int c = e.getValue() == null ? 0 : e.getValue();
+                if (c <= 0) continue;
+                net.sf.json.JSONArray cell = new net.sf.json.JSONArray();
+                cell.add(xi);
+                cell.add(yi.intValue());
+                cell.add(c);
+                cells.add(cell);
+                if (c > maxValue) maxValue = c;
+            }
+        }
+
+        net.sf.json.JSONArray xLabels = new net.sf.json.JSONArray();
+        xLabels.addAll(buildLabels);
+
+        result.put("labels",   xLabels);
+        result.put("yLabels",  yLabels);
+        result.put("yTitles",  yTitles);
+        result.put("cells",    cells);
+        result.put("maxValue", maxValue);
+        return result;
+    }
+
+    /**
+     * Picks the {@link FailureTriageBuildAction} on {@code build} that
+     * corresponds to {@code wantedTitle}. When {@code allowLegacy} is true
+     * AND no titled match is found, falls back to the first action with an
+     * empty {@code chartTitle} (data written by the pre-multi-chart version
+     * of the plugin).
+     */
+    private static FailureTriageBuildAction pickAction(
+            Run<?, ?> build, String wantedTitle, boolean allowLegacy) {
+        FailureTriageBuildAction legacy = null;
+        for (FailureTriageBuildAction a : build.getActions(FailureTriageBuildAction.class)) {
+            String t = a.getChartTitle();
+            if (wantedTitle.equals(t)) return a;
+            if (t.isEmpty() && legacy == null) legacy = a;
+        }
+        return allowLegacy ? legacy : null;
+    }
+
+    /** True when {@code gc} is the first configured grouped-runs chart. */
+    private boolean isFirstChart(
+            org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition gc) {
+        VManagerChartsJobProperty p = getProperty();
+        if (p == null) return false;
+        List<org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition> defs =
+                p.getGroupedRunsCharts();
+        return !defs.isEmpty() && defs.get(0) == gc;
     }
 
     /**

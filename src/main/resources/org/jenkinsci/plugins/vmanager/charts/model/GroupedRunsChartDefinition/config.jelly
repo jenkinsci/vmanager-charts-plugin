@@ -1,0 +1,55 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
+    <!--
+        Row 1: Chart Title + Chart Sub-title (no help).
+        Row 2: Y-axis limit + Max builds + Group-by attribute (all with help).
+    -->
+    <st:adjunct includes="org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition.assets"/>
+    <div class="vmp-chart-row">
+        <f:entry title="Chart Title *"
+                 field="title">
+            <f:textbox/>
+        </f:entry>
+        <f:entry title="Chart Sub-title"
+                 field="subtitle">
+            <f:textbox/>
+        </f:entry>
+    </div>
+    <div class="vmp-chart-row">
+        <f:entry title="Y-axis limit *"
+                 field="yAxisLimit"
+                 help="${descriptor.getHelpFile('yAxisLimit')}">
+            <f:textbox default="30"/>
+        </f:entry>
+        <f:entry title="Max builds *"
+                 field="maxBuilds"
+                 help="${descriptor.getHelpFile('maxBuilds')}">
+            <f:textbox default="30"/>
+        </f:entry>
+        <f:entry title="Group-by attribute *"
+                 field="groupByAttribute"
+                 help="${descriptor.getHelpFile('groupByAttribute')}">
+            <f:combobox fillDependsOn="../serverUrl ../credentialsId"
+                        checkDependsOn="../serverUrl ../credentialsId"/>
+        </f:entry>
+        <f:entry title="Statuses"
+                 field="statusFilters"
+                 help="${descriptor.getHelpFile('statusFilters')}">
+            <!-- The textbox stores a CSV of selected statuses (e.g.
+                 "passed,failed"). assets.js turns it into a multi-select
+                 popover dropdown with one checkbox per status from
+                 descriptor.allStatuses. An empty value means "include all
+                 statuses" (no status filter applied to the REST payload). -->
+            <f:textbox clazz="vmp-status-filters"
+                       default=""/>
+            <input type="hidden"
+                   class="vmp-status-filters-all"
+                   value="${descriptor.allStatuses.toString()}"/>
+        </f:entry>
+    </div>
+    <f:entry title="">
+        <div align="right">
+            <f:repeatableDeleteButton value="Delete Chart"/>
+        </div>
+    </f:entry>
+</j:jelly>

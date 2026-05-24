@@ -33,6 +33,25 @@
                     </div>
                 </j:if>
 
+                <!-- Custom Grouped Run's Charts (heatmaps), one per definition -->
+                <j:if test="${it.showFailureTriageChart}">
+                    <j:forEach var="gcard" items="${it.groupedRunsCards}">
+                        <div class="chart-section" data-chart-id="${gcard.chartId}">
+                            <h2>${gcard.title}</h2>
+                            <!-- Outer scroll container keeps each card the same
+                                 fixed height as the other dashboard cards; the
+                                 inner chart div is grown by JS to fit the row
+                                 count, and this wrapper scrolls when needed.
+                                 When magnified it expands to fill the modal
+                                 (see dashboard.css). -->
+                            <div class="failure-triage-scroll"
+                                 style="width: 100%; height: 400px; max-height: 400px; overflow-y: auto; overflow-x: hidden;">
+                                <div id="groupedRunsChart_${gcard.index}" style="width: 100%; height: 400px;"></div>
+                            </div>
+                        </div>
+                    </j:forEach>
+                </j:if>
+
                 <!-- Test Results Chart -->
                 <j:if test="${it.showTestResults}">
                     <div class="chart-section" data-chart-id="test-results">

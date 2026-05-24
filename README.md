@@ -53,6 +53,17 @@ automatically.
     per hierarchy).
     (Attributes that share the same hierarchy only need to have the verification scope 
     filled in for the first one.)
+- **Custom Grouped Run's Chart (Heatmap)** - aggregated run-level chart that
+  groups the build's runs by *any* RUN_LEVEL attribute exposed by vManager
+  (e.g. `first_failure_description`, `host`, `status`, `seed`, ...) and
+  renders the result as a heat-map of *most-recent N builds* &times;
+  *group values*, with each cell coloured by the number of runs in that
+  bucket. Each chart instance has its own title, group-by attribute,
+  Y-axis limit, max-builds window and an optional **Statuses** multi-select
+  that restricts the underlying `/rest/runs/list` query to runs whose
+  `status` matches one of the picked values (`running`, `finished`,
+  `other`, `waiting`, `stopped`, `passed`, `failed`). Leaving the
+  Statuses selector empty counts runs in *every* status.
 - **Two configuration sources** - *GUI (wizard)* or **JSON file** loaded
   at build time (from the agent workspace for freestyle jobs, from the
   build's work dir on the controller for pipeline jobs). Pick the JSON
@@ -151,6 +162,7 @@ The checkboxes below are shown only when **Configuration source = GUI**:
 | **Regression Anomaly Detection Summary** | `false` | Show the built-in stacked bar of pass/fail/skip from JUnit results. |
 | **Maximum builds** | `50` | How many of the most-recent builds the **built-in** charts plot. `0` = no limit (slow on long histories - a yellow warning is shown). |
 | **Show Custom Metrics** | `false` | Reveals the **Custom Charts** repeatable list below. |
+| **Show Custom Grouped Run's Charts** | `false` | Reveals the **Custom Grouped Run's Charts** repeatable list below. See [Custom Grouped Run's Charts](#custom-grouped-runs-charts-repeatable). |
 
 ### Verisium Manager connection
 
@@ -264,6 +276,27 @@ Charts will still render - the missing builds simply show `0`.
     nickname.
 - **Maximum builds** - non-negative integer; `0` is allowed but produces a
   yellow warning that the chart will scan the entire job history.
+
+### Custom Grouped Run's Charts (repeatable)
+
+Shown only when **Configuration source = GUI** and **Show Custom Grouped
+Run's Charts** is on. Each instance produces a separate heat-map under
+the **vManager Charts** page. Click **Add Grouped Run's Chart** for every
+heat-map you want; each one is configured independently with the fields
+below.
+
+| Field | Default | Notes |
+|-------|---------|-------|
+| **Chart Title** | *(empty, required)* | Rendered above the heat-map. |
+| **Chart Sub-title** | *(empty)* | Optional secondary line shown under the title. |
+| **Y-axis limit** | `30` | Maximum number of distinct group values shown on the Y-axis. Only the most populated groups are kept; the rest are dropped. |
+| **Max builds** | `30` | How many of the most-recent builds (X-axis) the heat-map plots. |
+| **Group-by attribute** | *(empty, required)* | Combobox populated showing every RUN_LEVEL attribute as `Title (id)`. Custom popover lets you free-type a substring filter and scroll. The displayed `Title (id)` string is what's saved, so the picker stays in sync on reopen. |
+| **Statuses** | *(empty = all)* | Multi-select dropdown of vManager run statuses (`running`, `finished`, `other`, `waiting`, `stopped`, `passed`, `failed`). When at least one is picked, the REST payload adds `InFilter(attName=status, operand=IN, values=[...])` chained AND with the `number_of_entities > 0` post-filter, so only runs in the selected statuses are counted. Leaving everything unchecked applies **no** status filter (all runs are counted). |
+
+Per chart the plugin issues one POST per build using for the build's sessions, grouped by the picked attribute and sorted DESC by
+`number_of_entities`. The resulting map of *group-value &rarr; count* is
+stored on the build and rendered as a heat-map cell.
 
 ## Usage
 

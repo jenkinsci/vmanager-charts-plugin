@@ -7,6 +7,7 @@ import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 import org.jenkinsci.plugins.vmanager.charts.VManagerChartsJobProperty;
 import org.jenkinsci.plugins.vmanager.charts.model.ChartDefinition;
+import org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition;
 import org.jenkinsci.plugins.vmanager.charts.model.MetricDefinition;
 import org.jenkinsci.plugins.vmanager.charts.model.RefinementFile;
 
@@ -61,10 +62,27 @@ public final class JsonConfigLoader {
         root.put("showRegressionOptimizationChart", p.isShowRegressionOptimizationChart());
         root.put("showBuildDuration",               p.isShowBuildDuration());
         root.put("showSuccessRate",                 p.isShowSuccessRate());
+        root.put("showGroupedRunsCharts",           p.isShowGroupedRunsCharts());
         // showTestResults (Regression Anomaly Detection Summary) is
         // feature-flagged off in the UI; do not export it until the
         // feature ships. The Java field is preserved for future use.
         root.put("showCustomMetrics",               p.isShowCustomMetrics());
+
+        JSONArray gCharts = new JSONArray();
+        List<GroupedRunsChartDefinition> grDefs = p.getGroupedRunsCharts();
+        if (grDefs != null) {
+            for (GroupedRunsChartDefinition gc : grDefs) {
+                JSONObject gj = new JSONObject();
+                gj.put("title",              nz(gc.getTitle()));
+                gj.put("subtitle",           nz(gc.getSubtitle()));
+                gj.put("groupByAttribute",   nz(gc.getGroupByAttribute()));
+                gj.put("yAxisLimit",         gc.getYAxisLimit());
+                gj.put("maxBuilds",          gc.getMaxBuilds());
+                gj.put("statusFilters",      nz(gc.getStatusFilters()));
+                gCharts.add(gj);
+            }
+        }
+        root.put("groupedRunsCharts", gCharts);
 
         JSONArray charts = new JSONArray();
         List<ChartDefinition> defs = p.getCustomCharts();
@@ -136,10 +154,12 @@ public final class JsonConfigLoader {
         p.setShowRegressionOptimizationChart(root.optBoolean("showRegressionOptimizationChart", false));
         p.setShowBuildDuration(root.optBoolean("showBuildDuration", false));
         p.setShowSuccessRate(root.optBoolean("showSuccessRate", false));
+        p.setShowGroupedRunsCharts(root.optBoolean("showGroupedRunsCharts", false));
         // showTestResults is feature-flagged off; force false regardless
         // of what an older JSON file may contain.
         p.setShowTestResults(false);
         p.setShowCustomMetrics(root.optBoolean("showCustomMetrics", false));
+        p.setGroupedRunsCharts(parseGroupedRunsCharts(root.opt("groupedRunsCharts")));
 
         // configSource / configFilePath are deliberately NOT carried over: when a
         // build has already loaded a JSON config, subsequent reads should not
@@ -265,6 +285,22 @@ public final class JsonConfigLoader {
             m.setRefinementFiles(parseRefinementFiles(row.opt("refinementFiles")));
             m.setVplanRefinementFiles(parseRefinementFiles(row.opt("vplanRefinementFiles")));
             out.add(m);
+        }
+        return out;
+    }
+
+    private static List<GroupedRunsChartDefinition> parseGroupedRunsCharts(Object raw) {
+        List<GroupedRunsChartDefinition> out = new ArrayList<>();
+        for (JSONObject row : asObjectList(raw)) {
+            String title    = row.optString("title", "");
+            String subtitle = row.optString("subtitle", "");
+            String groupBy  = row.optString("groupByAttribute", "");
+            GroupedRunsChartDefinition gc =
+                    new GroupedRunsChartDefinition(title, subtitle, groupBy);
+            gc.setYAxisLimit(row.optInt("yAxisLimit", 30));
+            gc.setMaxBuilds(row.optInt("maxBuilds", 30));
+            gc.setStatusFilters(row.optString("statusFilters", ""));
+            out.add(gc);
         }
         return out;
     }

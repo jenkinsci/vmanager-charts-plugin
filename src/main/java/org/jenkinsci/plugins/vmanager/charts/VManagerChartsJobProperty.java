@@ -12,6 +12,7 @@ import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.vmanager.charts.model.ChartDefinition;
+import org.jenkinsci.plugins.vmanager.charts.model.GroupedRunsChartDefinition;
 import jenkins.model.Jenkins;
 import jenkins.model.OptionalJobProperty;
 import org.kohsuke.stapler.AncestorInPath;
@@ -43,6 +44,10 @@ public class VManagerChartsJobProperty extends OptionalJobProperty<Job<?, ?>> {
     private boolean showCustomMetrics = false;
     private boolean showBuildLevelCharts = false;
     private boolean showRegressionOptimizationChart = false;
+    /** When true, render every {@link #groupedRunsCharts} entry as a heatmap. */
+    private boolean showGroupedRunsCharts = false;
+    /** User-defined heat-map charts ("Custom Grouped Run's Chart (Heatmap)"). */
+    private List<GroupedRunsChartDefinition> groupedRunsCharts = new ArrayList<>();
     private String serverUrl;
     private String credentialsId;
     private String vManagerSchema = "latest";
@@ -155,6 +160,28 @@ public class VManagerChartsJobProperty extends OptionalJobProperty<Job<?, ?>> {
     @DataBoundSetter
     public void setShowRegressionOptimizationChart(boolean showRegressionOptimizationChart) {
         this.showRegressionOptimizationChart = showRegressionOptimizationChart;
+    }
+
+    public boolean isShowGroupedRunsCharts() {
+        return showGroupedRunsCharts;
+    }
+
+    @DataBoundSetter
+    public void setShowGroupedRunsCharts(boolean showGroupedRunsCharts) {
+        this.showGroupedRunsCharts = showGroupedRunsCharts;
+    }
+
+    public List<GroupedRunsChartDefinition> getGroupedRunsCharts() {
+        if (!showGroupedRunsCharts) {
+            return Collections.emptyList();
+        }
+        return groupedRunsCharts == null ? Collections.emptyList() : groupedRunsCharts;
+    }
+
+    @DataBoundSetter
+    public void setGroupedRunsCharts(List<GroupedRunsChartDefinition> groupedRunsCharts) {
+        this.groupedRunsCharts = groupedRunsCharts != null
+                ? groupedRunsCharts : new ArrayList<>();
     }
 
     public String getServerUrl() {

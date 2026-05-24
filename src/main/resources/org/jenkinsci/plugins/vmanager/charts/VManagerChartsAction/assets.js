@@ -53,7 +53,178 @@
         initDurationChart();
         initSuccessRateChart();
         initTestResultsChart();
+        initGroupedRunsCharts();
         initCustomMetricsCharts();
+    }
+
+    function initGroupedRunsCharts() {
+        vManagerChartsProxy.getGroupedRunsChartsData(function (response) {
+            try {
+                var arr = response.responseObject();
+                if (!arr || arr.length === 0) return;
+                arr.forEach(function (data, index) {
+                    var chartDom = document.getElementById('groupedRunsChart_' + index);
+                    if (!chartDom) return;
+                    var myChart = echarts.init(chartDom);
+                    registerWithDashboard(chartDom, myChart);
+                    renderGroupedRunsHeatmap(myChart, data);
+                });
+            } catch (e) {
+                console.error('[vManager Charts] grouped runs data error:', e);
+            }
+        });
+    }
+
+    function renderGroupedRunsHeatmap(chart, data) {
+        var chartTitle    = (data && data.title)    ? data.title    : 'Grouped Runs';
+        var chartSubtitle = (data && data.subtitle) ? data.subtitle : '';
+        if (!data || !data.labels || data.labels.length === 0
+                || !data.yLabels || data.yLabels.length === 0) {
+            chart.setOption({
+                title: {
+                    text: chartTitle,
+                    subtext: chartSubtitle
+                        ? chartSubtitle
+                        : 'No data yet \u2014 enable the chart and run a build.',
+                    left: 'center'
+                }
+            });
+            return;
+        }
+
+        var xLabels = data.labels;
+        var yLabels = data.yLabels;
+        var yTitles = data.yTitles;
+        var cells   = data.cells;
+        var maxVal  = data.maxValue > 0 ? data.maxValue : 1;
+
+        var rowHeight = 28;
+        var overhead  = 220;
+        var dom = chart.getDom();
+        if (dom) {
+            var desiredHeight = Math.max(420, overhead + yLabels.length * rowHeight);
+            dom.style.height = desiredHeight + 'px';
+            chart.resize();
+        }
+
+        var option = {
+            title: {
+                text: chartTitle,
+                subtext: chartSubtitle,
+                left: 'center',
+                textStyle: { fontSize: 14, fontWeight: 'bold' },
+                subtextStyle: { fontSize: 11, color: '#666' }
+            },
+            tooltip: {
+                show: true,
+                triggerOn: 'none',
+                enterable: true,
+                position: 'top',
+                appendToBody: true,
+                extraCssText: 'max-width: 520px; max-height: 320px; overflow-x: auto; overflow-y: auto; white-space: normal; user-select: text; z-index: 20000;',
+                formatter: function (params) {
+                    var v = params.value || [];
+                    var xi = v[0], yi = v[1], count = v[2];
+                    var build = xLabels[xi] || '';
+                    var full  = (yTitles && yTitles[yi]) ? yTitles[yi] : (yLabels[yi] || '');
+                    var safeBuild = String(build).replace(/[&<>]/g, function (c) {
+                        return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
+                    });
+                    var safeFull = String(full).replace(/[&<>]/g, function (c) {
+                        return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
+                    });
+                    return '<div><strong>Build:</strong> ' + safeBuild + '</div>'
+                         + '<div><strong>Count:</strong> ' + count + '</div>'
+                         + '<div style="margin-top:4px;"><strong>Group value:</strong></div>'
+                         + '<div style="margin-top:2px;">' + safeFull + '</div>';
+                }
+            },
+            grid: {
+                left: 360,
+                right: 60,
+                top: 80,
+                bottom: 80,
+                containLabel: false
+            },
+            xAxis: {
+                type: 'category',
+                data: xLabels,
+                splitArea: { show: true },
+                axisLabel: { rotate: 45, fontSize: 11 }
+            },
+            yAxis: {
+                type: 'category',
+                data: yLabels,
+                splitArea: { show: true },
+                axisLabel: {
+                    fontSize: 11,
+                    width: 340,
+                    overflow: 'truncate',
+                    formatter: function (val) { return val; }
+                }
+            },
+            visualMap: {
+                min: 0,
+                max: maxVal,
+                calculable: true,
+                orient: 'horizontal',
+                left: 'center',
+                bottom: 10,
+                inRange: {
+                    color: ['#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d']
+                }
+            },
+            series: [{
+                name: 'Count',
+                type: 'heatmap',
+                data: cells,
+                label: { show: true, fontSize: 10 },
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }],
+            toolbox: {
+                showTitle: false,
+                tooltip: {
+                    show: true,
+                    position: 'top',
+                    backgroundColor: 'rgba(50,50,50,0.9)',
+                    textStyle: { color: '#fff', fontSize: 12 }
+                },
+                feature: {
+                    dataView:    { title: 'Data View', lang: ['Data View', 'Close', 'Refresh'], readOnly: true },
+                    restore:     { title: 'Restore' },
+                    saveAsImage: { title: 'Save' }
+                }
+            }
+        };
+
+        chart.setOption(option);
+
+        chart.on('click', function (params) {
+            if (params.componentType !== 'series') return;
+            chart.dispatchAction({
+                type:        'showTip',
+                seriesIndex: params.seriesIndex,
+                dataIndex:   params.dataIndex
+            });
+        });
+
+        var chartDom = chart.getDom();
+        if (chartDom && !chartDom._groupedRunsOutsideHandler) {
+            var outsideHandler = function (e) {
+                if (!chartDom.contains(e.target)) {
+                    chart.dispatchAction({ type: 'hideTip' });
+                }
+            };
+            document.addEventListener('click', outsideHandler);
+            chartDom._groupedRunsOutsideHandler = outsideHandler;
+        }
+
+        window.addEventListener('resize', function () { chart.resize(); });
     }
 
     function initCustomMetricsCharts() {

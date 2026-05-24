@@ -302,4 +302,195 @@ public final class VManagerRunsClient {
             return 0.0;
         }
     }
+
+    /**
+     * POSTs {@code /rest/runs/list} grouped by {@code first_failure_description}
+     * for the given sessions and returns a map of description &rarr;
+     * {@code number_of_entities}. Thin wrapper around
+     * {@link #fetchGroupByCounts(String, Collection, StandardUsernamePasswordCredentials,
+     * TaskListener, String, int, java.util.List)} preserved for backward
+     * compatibility with the original single-purpose Failure Triage chart;
+     * applies the historical {@code status IN ["failed"]} filter so callers
+     * get the same data set they used to.
+     */
+    public static java.util.LinkedHashMap<String, Integer> fetchFailureDescriptionCounts(
+            String baseUrl,
+            Collection<String> sessionNames,
+            StandardUsernamePasswordCredentials creds,
+            TaskListener listener) throws IOException {
+        return fetchGroupByCounts(baseUrl, sessionNames, creds, listener,
+                "first_failure_description", 100,
+                java.util.Collections.singletonList("failed"));
+    }
+
+    /**
+     * Two-argument convenience overload for callers that don't need to
+     * restrict by run status. Equivalent to passing an empty
+     * {@code statusFilters} list.
+     */
+    public static java.util.LinkedHashMap<String, Integer> fetchGroupByCounts(
+            String baseUrl,
+            Collection<String> sessionNames,
+            StandardUsernamePasswordCredentials creds,
+            TaskListener listener,
+            String groupByAttributeId,
+            int pageLength) throws IOException {
+        return fetchGroupByCounts(baseUrl, sessionNames, creds, listener,
+                groupByAttributeId, pageLength, java.util.Collections.emptyList());
+    }
+
+    /**
+     * POSTs {@code /rest/runs/list} grouped by an arbitrary RUN_LEVEL
+     * attribute and returns a map of group-value &rarr;
+     * {@code number_of_entities}. Insertion order is preserved from the
+     * server response (sorted DESCENDING by {@code number_of_entities}).
+     * Entries with {@code number_of_entities <= 0} are filtered out
+     * server-side via the {@code postFilter}.
+     *
+     * @param baseUrl            vManager server base URL.
+     * @param sessionNames       one or more session names; {@code null}/empty
+     *                           returns an empty map.
+     * @param creds              credentials for HTTP Basic auth; may be {@code null}.
+     * @param listener           optional task listener; when non-null the URL,
+     *                           headers and payload are echoed to the build log
+     *                           (only when verbose logging is on).
+     * @param groupByAttributeId id of the RUN_LEVEL attribute to group on
+     *                           (e.g. {@code first_failure_description},
+     *                           {@code status}, {@code computer}).
+     * @param pageLength         maximum number of groups to return.
+     * @param statusFilters      optional list of run statuses (e.g.
+     *                           {@code ["failed"]}, {@code ["passed","failed"]}).
+     *                           Empty / {@code null} means "no status filter".
+     */
+    public static java.util.LinkedHashMap<String, Integer> fetchGroupByCounts(
+            String baseUrl,
+            Collection<String> sessionNames,
+            StandardUsernamePasswordCredentials creds,
+            TaskListener listener,
+            String groupByAttributeId,
+            int pageLength,
+            java.util.List<String> statusFilters) throws IOException {
+
+        java.util.LinkedHashMap<String, Integer> out = new java.util.LinkedHashMap<>();
+        if (sessionNames == null || sessionNames.isEmpty()
+                || baseUrl == null || baseUrl.isBlank()
+                || groupByAttributeId == null || groupByAttributeId.isBlank()) {
+            return out;
+        }
+        if (pageLength <= 0) pageLength = 100;
+
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        String url  = base + "/rest/runs/list";
+
+        // ── filter: RelationFilter(session) → InFilter(session_name IN [...]) ──
+        JSONArray sessionValues = new JSONArray();
+        for (String session : sessionNames) {
+            if (session == null || session.isBlank()) continue;
+            sessionValues.add(session);
+        }
+
+        JSONObject inFilter = new JSONObject();
+        inFilter.put("@c",      ".InFilter");
+        inFilter.put("attName", "session_name");
+        inFilter.put("operand", "IN");
+        inFilter.put("values",  sessionValues);
+
+        JSONObject filter = new JSONObject();
+        filter.put("@c",           ".RelationFilter");
+        filter.put("relationName", "session");
+        filter.put("filter",       inFilter);
+
+        // ── grouping: [groupByAttributeId] ──
+        JSONArray grouping = new JSONArray();
+        grouping.add(groupByAttributeId);
+
+        // ── postFilter: number_of_entities > 0, AND-ed with an optional
+        //    user-supplied status InFilter. When {@code statusFilters} is
+        //    null/empty, only the count filter is applied. ──
+        JSONObject countFilter = new JSONObject();
+        countFilter.put("@c",       ".AttValueFilter");
+        countFilter.put("operand",  "GREATER_THAN");
+        countFilter.put("attName",  "number_of_entities");
+        countFilter.put("attValue", "0");
+
+        JSONObject postFilter;
+        if (statusFilters != null && !statusFilters.isEmpty()) {
+            JSONObject statusFilter = new JSONObject();
+            statusFilter.put("@c",      ".InFilter");
+            statusFilter.put("operand", "IN");
+            statusFilter.put("attName", "status");
+            JSONArray statusValues = new JSONArray();
+            for (String s : statusFilters) {
+                if (s != null && !s.isBlank()) statusValues.add(s.trim().toLowerCase());
+            }
+            statusFilter.put("values", statusValues);
+
+            JSONArray chain = new JSONArray();
+            chain.add(statusFilter);
+            chain.add(countFilter);
+
+            postFilter = new JSONObject();
+            postFilter.put("@c",        ".ChainedFilter");
+            postFilter.put("condition", "AND");
+            postFilter.put("chain",     chain);
+        } else {
+            postFilter = countFilter;
+        }
+
+        // ── sortSpec: number_of_entities DESCENDING ──
+        JSONArray sortSpec = new JSONArray();
+        JSONObject sort = new JSONObject();
+        sort.put("attName",   "number_of_entities");
+        sort.put("direction", "DESCENDING");
+        sortSpec.add(sort);
+
+        // ── projection: SELECTION_ONLY [groupByAttributeId, number_of_entities] ──
+        JSONArray selection = new JSONArray();
+        selection.add(groupByAttributeId);
+        selection.add("number_of_entities");
+
+        JSONObject projection = new JSONObject();
+        projection.put("type",      "SELECTION_ONLY");
+        projection.put("selection", selection);
+
+        JSONObject body = new JSONObject();
+        body.put("filter",     filter);
+        body.put("grouping",   grouping);
+        body.put("postFilter", postFilter);
+        body.put("sortSpec",   sortSpec);
+        body.put("pageOffset", 0);
+        body.put("pageLength", pageLength);
+        body.put("projection", projection);
+
+        String payload = body.toString();
+        String debug = "[vManager Charts] POST " + url
+                + "\n  headers: Content-Type=application/json; charset=UTF-8, "
+                + "Accept=application/json, Authorization=Basic <redacted>"
+                + "\n  payload: " + payload;
+        if (listener != null && BuildLog.isVerbose()) {
+            listener.getLogger().println(debug);
+        }
+        LOGGER.log(Level.FINE, debug);
+
+        String responseBody = VManagerHttpClient.postJson(url, payload, creds);
+
+        Object parsed = JSONSerializer.toJSON(responseBody);
+        if (!(parsed instanceof JSONArray)) {
+            return out;
+        }
+        JSONArray rows = (JSONArray) parsed;
+        for (int i = 0; i < rows.size(); i++) {
+            Object e = rows.get(i);
+            if (!(e instanceof JSONObject)) continue;
+            JSONObject row = (JSONObject) e;
+            Object descRaw = row.opt(groupByAttributeId);
+            String desc = (descRaw == null || net.sf.json.JSONNull.getInstance().equals(descRaw))
+                    ? "" : String.valueOf(descRaw);
+            int count = (int) Math.round(optDouble(row, "number_of_entities"));
+            if (count <= 0) continue;
+            Integer prev = out.get(desc);
+            out.put(desc, prev == null ? count : prev + count);
+        }
+        return out;
+    }
 }
