@@ -1,7 +1,7 @@
 package org.jenkinsci.plugins.vmanager.charts.model;
 
 import hudson.Extension;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.Descriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -13,7 +13,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  * <p>Used as the row type for the repeatable path lists on a
  * {@link MetricDefinition} (Coverage / vPlan refinement files).</p>
  */
-public class RefinementFile extends AbstractDescribableImpl<RefinementFile> {
+public class RefinementFile implements Describable<RefinementFile> {
 
     private final String path;
 

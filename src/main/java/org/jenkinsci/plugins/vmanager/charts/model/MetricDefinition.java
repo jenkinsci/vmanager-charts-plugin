@@ -5,7 +5,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.security.ACL;
@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  * chart legend and {@link #getAttributeId()} for the vManager REST fetch.
  * Plain values without parentheses (manually typed or legacy) are treated as-is.
  */
-public class MetricDefinition extends AbstractDescribableImpl<MetricDefinition> {
+public class MetricDefinition implements Describable<MetricDefinition> {
 
     /** One of: SESSION_LEVEL, VPLAN_LEVEL, COVERAGE_LEVEL */
     private final String entityType;

@@ -6,7 +6,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
 import hudson.RelativePath;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.security.ACL;
@@ -41,7 +41,7 @@ import java.util.logging.Logger;
  * {@link #getGroupByAttributeId()} when making REST calls and
  * {@link #getGroupByAttributeTitle()} for display.</p>
  */
-public class GroupedRunsChartDefinition extends AbstractDescribableImpl<GroupedRunsChartDefinition> {
+public class GroupedRunsChartDefinition implements Describable<GroupedRunsChartDefinition> {
 
     private final String title;
     private final String subtitle;

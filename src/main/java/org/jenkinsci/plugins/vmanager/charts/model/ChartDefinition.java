@@ -6,7 +6,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
 import hudson.RelativePath;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.security.ACL;
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  * Each chart has a title (rendered above it) and one or more
  * {@link MetricDefinition} entries that become series on that chart.
  */
-public class ChartDefinition extends AbstractDescribableImpl<ChartDefinition> {
+public class ChartDefinition implements Describable<ChartDefinition> {
 
     private final String title;
     private final List<MetricDefinition> metrics;
