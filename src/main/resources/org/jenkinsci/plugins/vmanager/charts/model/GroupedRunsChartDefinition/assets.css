@@ -82,29 +82,6 @@
 }
 
 .vmp-status-filters-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
     justify-content: space-between;
-    /* Match Jenkins' standard input metrics so the Statuses control lines
-       up with the textbox / combobox on the same row in both default and
-       dark themes. The exact CSS variables Jenkins exposes for input
-       sizing have shifted between releases, so we use literal values that
-       mirror the core defaults (padding 0.5rem 0.75rem, line-height 1.5,
-       font-size 0.875rem -> ~38px tall). */
-    min-height: 2.375rem;
-    padding: 0.5rem 0.75rem;
-    line-height: 1.5;
-    font-size: 0.875rem;
-    border: 1px solid var(--card-border-color, #ccc);
-    border-radius: 6px;
-    background: var(--input-background, var(--card-background, #fff));
-    color: var(--text-color, #000);
-    cursor: pointer;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }

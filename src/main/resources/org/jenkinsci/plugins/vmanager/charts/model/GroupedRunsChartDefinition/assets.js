@@ -13,8 +13,6 @@
  *     exactly one button per row.
  */
 (function () {
-    if (window.__vmpGroupedRunsComboPatched) return;
-    window.__vmpGroupedRunsComboPatched = true;
 
     function attachGroupByCombo(input) {
         if (input.__vmpGroupedAttached) return;
@@ -85,12 +83,8 @@
                       : sel.length === all.length ? 'All statuses'
                       : sel.length <= 2 ? sel.join(', ')
                       : sel.length + ' selected';
-            btn.innerHTML = '<span>' + escapeHtml(label) + '</span><span style="opacity:0.6;">\u25BE</span>';
-        }
-        function escapeHtml(s) {
-            return String(s).replace(/[&<>]/g, function (c) {
-                return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
-            });
+            var s = btn.querySelector('span');
+            s.textContent = label;
         }
         updateLabel();
 
@@ -207,15 +201,7 @@
         installStatusMultiSelect(btn, input, allEl);
     }
 
-    if (typeof Behaviour !== 'undefined' && typeof Behaviour.specify === 'function') {
-        Behaviour.specify('button.vmp-status-filters-btn',
-                          'vmp-status-filters-btn', 0,
-                          attachStatusFilterButton);
-    } else {
-        // Fallback if Behaviour isn't available for some reason.
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('button.vmp-status-filters-btn')
-                    .forEach(attachStatusFilterButton);
-        });
-    }
+    Behaviour.specify('button.vmp-status-filters-btn',
+                      'vmp-status-filters-btn', 0,
+                      attachStatusFilterButton);
 })();

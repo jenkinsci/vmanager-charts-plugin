@@ -19,8 +19,6 @@
  *     or when any nickname problem is detected.
  */
 (function () {
-    if (window.__vmpComboPatched) return;
-    window.__vmpComboPatched = true;
 
     function attachAll() {
         document.querySelectorAll('input.vmp-combo-attr').forEach(function (input) {

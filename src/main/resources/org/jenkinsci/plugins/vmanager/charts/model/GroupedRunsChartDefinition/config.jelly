@@ -1,5 +1,5 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:l="/lib/layout">
     <!--
         Row 1: Chart Title + Chart Sub-title (no help).
         Row 2: Y-axis limit + Max builds + Group-by attribute (all with help).
@@ -52,8 +52,8 @@
             <f:textbox clazz="vmp-status-filters"
                        default=""/>
             <button type="button"
-                    class="vmp-status-filters-btn">
-                <span>All statuses</span><span style="opacity:0.6;">▾</span>
+                    class="jenkins-button vmp-status-filters-btn">
+                <span>All statuses</span><l:icon src="symbol-chevron-down-outline plugin-ionicons-api"/>
             </button>
             <input type="hidden"
                    class="vmp-status-filters-all"

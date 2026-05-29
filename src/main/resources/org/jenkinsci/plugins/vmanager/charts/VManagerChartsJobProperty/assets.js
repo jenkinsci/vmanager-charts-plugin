@@ -1,81 +1,5 @@
 ﻿
 (function () {
-    if (window.__vmpFetchDedupInstalled) return;
-    window.__vmpFetchDedupInstalled = true;
-
-    var cache = {};   // key -> Promise<Response> (un-consumed; cloned per caller)
-
-    function paramFromUrl(url, name) {
-        var m = new RegExp('[?&]' + name + '=([^&]*)').exec(url || '');
-        return m ? decodeURIComponent(m[1]) : '';
-    }
-    function paramFromBody(body, name) {
-        if (!body) return '';
-        try {
-            if (body instanceof FormData) {
-                var v = body.get(name);
-                return v != null ? String(v) : '';
-            }
-            var s = (typeof body === 'string') ? body
-                  : (body instanceof URLSearchParams) ? body.toString()
-                  : (typeof body.toString === 'function') ? body.toString()
-                  : '';
-            var m = new RegExp('(?:^|&)' + name + '=([^&]*)').exec(s);
-            return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
-        } catch (e) { return ''; }
-    }
-
-    function keyFor(url, init) {
-        if (/AttributeNameItems/.test(url)) {
-            var ent = paramFromUrl(url, 'entityType')
-                   || paramFromBody(init && init.body, 'entityType');
-            return 'attr:' + ent;
-        }
-        if (/VPlanPathItems/.test(url)) {
-            // Key by vPlanType + serverUrl so the (empty) result Jenkins
-            // fetches on page-load while vPlanType is still "" doesn't
-            // poison the cache and starve the real "DB" fetch.
-            var vt  = paramFromUrl(url, 'vPlanType')
-                   || paramFromBody(init && init.body, 'vPlanType');
-            var srv = paramFromUrl(url, 'serverUrl')
-                   || paramFromBody(init && init.body, 'serverUrl');
-            return 'vplan:' + vt + '|' + srv;
-        }
-        return null;
-    }
-
-    var origFetch = window.fetch;
-    window.fetch = function (input, init) {
-        var url = (typeof input === 'string') ? input
-                : (input && input.url) ? input.url : '';
-        var key = keyFor(url, init);
-        if (!key) return origFetch.apply(this, arguments);
-
-        if (!cache[key]) {
-            // First request for this key: actually hit the network.
-            // Store the un-consumed Response so callers can clone it.
-            cache[key] = origFetch.apply(this, arguments).then(
-                function (rsp) {
-                    if (!rsp.ok) delete cache[key];   // don't cache failures
-                    return rsp;
-                },
-                function (err) {
-                    delete cache[key];
-                    throw err;
-                }
-            );
-        }
-        // Every caller (including the very first) gets a fresh clone so
-        // its body stream is independent of the cached Response and of
-        // any other caller's clone.
-        return cache[key].then(function (rsp) { return rsp.clone(); });
-    };
-})();
-    
-
-(function () {
-    if (window.__vmpSessionSrcHooked) return;
-    window.__vmpSessionSrcHooked = true;
 
     function syncByName(root, selectName, condClass) {
         var sel = (root || document).querySelector('select[name$="' + selectName + '"]');
@@ -108,8 +32,6 @@
         
 
 (function () {
-    if (window.__vmpExportHooked) return;
-    window.__vmpExportHooked = true;
 
     function getCrumb() {
         var meta = document.querySelector('meta[name="crumb"]');

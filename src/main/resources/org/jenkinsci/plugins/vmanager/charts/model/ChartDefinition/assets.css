@@ -8,8 +8,8 @@
         .vmp-chart-row > .jenkins-form-item,
         .vmp-chart-row > div.tr,
         .vmp-chart-row > tr {
-            flex: 1 1 200px;
-            min-width: 180px;
+            flex: 1 1 220px;
+            min-width: 220px;
         }
         /* Chart Title (first column) gets a bit more room. */
         .vmp-chart-row > .jenkins-form-item:nth-child(1),

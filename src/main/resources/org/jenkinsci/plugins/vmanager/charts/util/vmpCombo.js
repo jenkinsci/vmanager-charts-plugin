@@ -62,25 +62,6 @@
     }
 
     /**
-     * Find the Jenkins CSRF crumb header name + value. Jenkins exposes
-     * these on the <head> element as data-crumb-header / data-crumb-value
-     * (and also on document.body in some core versions).
-     */
-    function crumbHeaders() {
-        var h = {};
-        var el = document.head || document.body;
-        var name  = el && (el.getAttribute('data-crumb-header'));
-        var value = el && (el.getAttribute('data-crumb-value'));
-        if (!name || !value) {
-            var b = document.body;
-            name  = name  || (b && b.getAttribute('data-crumb-header'));
-            value = value || (b && b.getAttribute('data-crumb-value'));
-        }
-        if (name && value) h[name] = value;
-        return h;
-    }
-
-    /**
      * Fetch a Jenkins fill endpoint as JSON and return a Promise<string[]>.
      * Accepts both {values: [...]} and a bare array, and accepts either
      * plain strings or {name: '...'} objects per item.
@@ -89,13 +70,23 @@
      * so we send POST with parameters in the form body and include the
      * Jenkins crumb header. Stapler reads @QueryParameter from either the
      * query string or the form-encoded body.
+     *
+     * Results are cached module-globally per (url + params) so that N
+     * MetricDefinition rows that all need e.g. the attribute list for
+     * entityType=run share a single network round-trip. Failed fetches
+     * are not cached.
      */
+    var sharedItemsCache = Object.create(null);
     function fetchItems(url, params) {
-        var body = buildQuery(params || {});
-        var headers = crumbHeaders();
-        headers['Accept']       = 'application/json';
-        headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
-        return fetch(url, {
+        var p = params || {};
+        var body = buildQuery(p);
+        var cacheKey = url + '?' + body;
+        if (sharedItemsCache[cacheKey]) return sharedItemsCache[cacheKey];
+        var headers = crumb.wrap({
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        });
+        var promise = fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
             headers: headers,
@@ -112,7 +103,12 @@
                      : (it && it.name) ? it.name
                      : String(it);
             });
+        }).catch(function (e) {
+            delete sharedItemsCache[cacheKey];
+            throw e;
         });
+        sharedItemsCache[cacheKey] = promise;
+        return promise;
     }
 
     /**

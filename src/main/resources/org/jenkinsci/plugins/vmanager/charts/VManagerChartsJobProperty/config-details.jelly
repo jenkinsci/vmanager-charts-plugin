@@ -2,26 +2,6 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
     <st:adjunct includes="org.jenkinsci.plugins.vmanager.charts.VManagerChartsJobProperty.assets"/>
     <!--
-        Fetch-dedup wrapper: collapse the many identical vManager-backed
-        fill REST calls that Jenkins fires on page load (one per chart row
-        for vPlan paths, and one per metric row for each entity-type
-        attribute list) into at most one network request per distinct
-        result set:
-            * AttributeNameItems is keyed by entityType   (ג‰₪ 3 keys)
-            * VPlanPathItems     is keyed by URL          (1 key)
-
-        On page load every visible row still triggers a fetch through
-        Jenkins' combobox2 ג€” but only the first fetch for each key
-        actually leaves the browser. All other concurrent / later fetches
-        are served from a cloned cached Response, so the per-row response
-        interceptors in MetricDefinition / ChartDefinition still see a
-        real Response object, parse it, and populate their per-row
-        itemsByEntity caches normally.
-
-        Installed as the FIRST script in this jelly so we wrap fetch
-        BEFORE Jenkins' combobox initialization runs.
-    -->
-    <!--
         Help-icon styling (scoped to .vmp-charts-root, which wraps the entire
         plugin block including child Jellies for ChartDefinition / MetricDefinition).
         For NON-checkbox fields the description is hidden and replaced by a "?"

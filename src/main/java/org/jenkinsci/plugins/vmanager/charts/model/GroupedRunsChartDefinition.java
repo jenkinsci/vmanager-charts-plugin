@@ -249,7 +249,7 @@ public class GroupedRunsChartDefinition implements Describable<GroupedRunsChartD
 
             VManagerChartsUtil.checkDescriptorPermission(item);
             ComboBoxModel m = new ComboBoxModel();
-            LOGGER.log(Level.INFO,
+            LOGGER.log(Level.FINE,
                     "[GroupedRuns] doFillGroupByAttributeItems called. serverUrl=''{0}'' credentialsId=''{1}'' item=''{2}''",
                     new Object[]{ serverUrl, credentialsId,
                             item == null ? "<null>" : item.getFullName() });
@@ -262,24 +262,24 @@ public class GroupedRunsChartDefinition implements Describable<GroupedRunsChartD
             }
 
             String url = buildRunsListUrl(serverUrl);
-            LOGGER.log(Level.INFO,
+            LOGGER.log(Level.FINE,
                     "[GroupedRuns] REST GET {0}  (payload: <none>; GET request)", url);
             try {
                 StandardUsernamePasswordCredentials creds =
                         lookupCredentials(item, credentialsId, serverUrl);
-                LOGGER.log(Level.INFO,
+                LOGGER.log(Level.FINE,
                         "[GroupedRuns] credentials resolved: {0}",
                         creds == null ? "<none>" : creds.getId());
                 String body = VManagerHttpClient.getJson(url, creds);
                 int bodyLen = body == null ? -1 : body.length();
                 String head = body == null ? "<null>"
                         : (body.length() > 800 ? body.substring(0, 800) + "\u2026" : body);
-                LOGGER.log(Level.INFO,
+                LOGGER.log(Level.FINE,
                         "[GroupedRuns] HTTP 200, body length={0}; head:\n{1}",
                         new Object[]{ bodyLen, head });
 
                 List<String[]> attrs = parseAllAttributes(body);
-                LOGGER.log(Level.INFO,
+                LOGGER.log(Level.FINE,
                         "[GroupedRuns] parsed {0} attribute(s) from response.", attrs.size());
                 attrs.sort((a, b) -> a[1].compareToIgnoreCase(b[1]));
                 for (String[] attr : attrs) {

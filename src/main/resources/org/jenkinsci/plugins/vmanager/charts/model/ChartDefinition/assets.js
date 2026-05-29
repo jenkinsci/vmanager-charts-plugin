@@ -13,8 +13,6 @@
  *     submission when required fields on any chart row are empty.
  */
 (function () {
-    if (window.__vmpVPlanPatched2) return;
-    window.__vmpVPlanPatched2 = true;
 
     function rowOf(input) {
         return input.closest('.repeated-chunk') || input.closest('.vmp-chart-row') || document;
@@ -73,8 +71,6 @@
 
 // Block save when any Chart Title is empty, or any Max Builds is missing/invalid.
 (function () {
-    if (window.__vmpChartTitleSubmitHooked) return;
-    window.__vmpChartTitleSubmitHooked = true;
 
     function clearErr(input, cls) {
         input.style.outline = '';
