@@ -55,7 +55,7 @@ automatically.
     filled in for the first one.)
 - **Custom Grouped Run's Chart (Heatmap)** - aggregated run-level chart that
   groups the build's runs by *any* RUN_LEVEL attribute exposed by vManager
-  (e.g. `first_failure_description`, `host`, `status`, `seed`, ...) and
+  (e.g. `first_failure_description`, `host`, `status`, `seed` ...) and
   renders the result as a heat-map of *most-recent N builds* &times;
   *group values*, with each cell coloured by the number of runs in that
   bucket. Each chart instance has its own title, group-by attribute,
