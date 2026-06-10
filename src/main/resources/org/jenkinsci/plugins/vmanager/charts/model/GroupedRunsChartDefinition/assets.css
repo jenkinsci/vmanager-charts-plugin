@@ -102,3 +102,29 @@
 .vmp-status-filters-btn [class*="icon"] {
     flex-shrink: 0;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Column widths for the Grouped-runs chart's second row.
+ * Layout: Y-axis limit | Max builds | Group-by attribute | Statuses.
+ * Y-axis limit and Max builds are digit-only number inputs and don't need
+ * the default 220px; shrink them so the Statuses column (which displays
+ * the comma-separated list of selected statuses) gets the extra space.
+ * Selectors are doubled with .vmp-chart-row to outweigh the generic
+ * nth-child rules in ChartDefinition/assets.css.
+ * ────────────────────────────────────────────────────────────────────── */
+.vmp-chart-row.vmp-grouped-attrs-row > .jenkins-form-item:nth-child(1),
+.vmp-chart-row.vmp-grouped-attrs-row > div.tr:nth-child(1),
+.vmp-chart-row.vmp-grouped-attrs-row > tr:nth-child(1),
+.vmp-chart-row.vmp-grouped-attrs-row > .jenkins-form-item:nth-child(2),
+.vmp-chart-row.vmp-grouped-attrs-row > div.tr:nth-child(2),
+.vmp-chart-row.vmp-grouped-attrs-row > tr:nth-child(2) {
+    flex: 0 1 110px;
+    min-width: 90px;
+}
+
+.vmp-chart-row.vmp-grouped-attrs-row > .jenkins-form-item:nth-child(4),
+.vmp-chart-row.vmp-grouped-attrs-row > div.tr:nth-child(4),
+.vmp-chart-row.vmp-grouped-attrs-row > tr:nth-child(4) {
+    flex: 3 1 320px;
+    min-width: 240px;
+}

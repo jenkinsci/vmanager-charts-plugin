@@ -26,6 +26,10 @@ charts plugin can read session names from a workspace file. However, when the
 vManager Plugin is also installed, this plugin can pick up session names
 automatically.
 
+**Example - job-level dashboard:**
+
+![vManager Charts job-level dashboard](docs/images/dashboard.png)
+
 ## Features
 
 - **Job-level integration** - adds a **vManager Charts** link to the job's
@@ -37,7 +41,8 @@ automatically.
   (not aggregated across the job) and currently include the **Runs Duration
   Chart**, which renders a distribution of the build's runs (only passed runs) by start time
   (X axis) and run duration (Y axis), so you can spot if there's any
-  potential for faster turn-around time for the overall regression.
+  potential for faster turn-around time for the overall regression
+  (see [Runs Duration Chart](#runs-duration-chart) below for details).
 - **Build Duration Chart** - line chart showing each build's wall-clock
   duration over the configured window (50 last builds) (no Verisium Manager server required).
 - **Success/Failure Rate Chart** - stacked bar chart of build outcomes
@@ -152,7 +157,7 @@ The checkboxes below are shown only when **Configuration source = GUI**:
 | Field | Default | Description |
 |-------|---------|-------------|
 | **Build Level Charts** | `false` | Master switch for the *per-build* charts. When on, a **vManager Charts** link is also added to every build's sidebar. Expands the sub-options below. |
-| &nbsp;&nbsp;&nbsp;&nbsp;**Runs Duration Chart** | `false` | Distribution of the build's runs by start time (X axis) and run duration (Y axis). |
+| &nbsp;&nbsp;&nbsp;&nbsp;**Runs Duration Chart** | `false` | Distribution of the build's runs by start time (X axis) and run duration (Y axis). See [Runs Duration Chart](#runs-duration-chart) below for details. |
 | **Build Duration Chart** | `false` | Show the built-in line chart of build duration. |
 | **Success/Failure Rate Chart** | `false` | Show the built-in stacked bar of build outcomes. |
 | **Regression Anomaly Detection Summary** | `false` | Show the built-in stacked bar of pass/fail/skip from JUnit results. |
@@ -358,6 +363,39 @@ by default - enable them via a Log Recorder:
 The recorder is global (visible to all Jenkins users); the per-job
 **Verbose build logging** checkbox above controls only the per-build
 console and is opt-in per job.
+
+## Runs Duration Chart
+
+This chart analyzes the duration of all runs within a session (or across
+multiple sessions). It sorts them by runtime and divides them into three
+equal groups:
+
+- Shortest 33%
+- Middle 33%
+- Longest 33%
+
+In an optimized TAT scenario, the longest tests (red) should start first,
+followed by medium (yellow), and finally the shortest (green). If all tests
+start at the same time, it indicates that the environment is not configured
+for optimal TAT. This visualization allows users to immediately spot the
+issue.
+
+The ability to maximize the TAT (Turnaround Time) is provided by the
+Verisium Manager **Regression Health** capability.
+
+**Example - TAT is not maximized:**
+
+![Runs Duration Chart - before TAT optimization](docs/images/duration_smart_before.png)
+
+**Example - TAT is maximized (via Verisium Manager Regression Health):**
+
+![Runs Duration Chart - after TAT optimization](docs/images/duration_smart_after.png)
+
+In both examples above you can see one initial regression followed by two
+consecutive reruns that start after the previous one ends. The gap between
+each cluster of runs tells you how much time passes between when the first
+regression execution ends and when the next rerun actually starts - useful
+for spotting idle time in the overall regression pipeline.
 
 ## Troubleshooting
 
