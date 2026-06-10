@@ -16,7 +16,7 @@
             <f:textbox/>
         </f:entry>
     </div>
-    <div class="vmp-chart-row">
+    <div class="vmp-chart-row vmp-grouped-attrs-row">
         <f:entry title="Y-axis limit *"
                  field="yAxisLimit"
                  help="${descriptor.getHelpFile('yAxisLimit')}">

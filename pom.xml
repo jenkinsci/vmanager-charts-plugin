@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>6.2153.vcf31911d10c4</version>
+        <version>6.2189.v695a_c41f5249</version>
         <relativePath />
     </parent>
 
@@ -102,6 +102,41 @@
             <artifactId>workflow-step-api</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Pin annotation processors explicitly. Required on JDK 21 +
+                maven-compiler-plugin 3.13+: when the parent POM passes
+                `-proc:full`, sezpoz (which produces
+                `META-INF/annotations/hudson.Extension` for every @Extension)
+                is otherwise not discovered from the compile classpath, the
+                index file is omitted, and Jenkins fails the descriptor
+                lookup at runtime with
+                `class … is missing its descriptor`.
+                annotation-indexer is also listed so @Symbol / @Restricted /
+                @ExportedBean continue to be indexed.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths combine.children="append">
+                        <path>
+                            <groupId>net.java.sezpoz</groupId>
+                            <artifactId>sezpoz</artifactId>
+                            <version>1.13</version>
+                        </path>
+                        <path>
+                            <groupId>org.jenkins-ci</groupId>
+                            <artifactId>annotation-indexer</artifactId>
+                            <version>1.213.v92788b_1f0a_21</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <repositories>
         <repository>
